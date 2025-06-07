@@ -1,0 +1,7 @@
+<IfModule mod_headers.c>
+    <FilesMatch "\.(m3u8|ts)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header set Access-Control-Allow-Methods "GET, OPTIONS"
+        Header set Access-Control-Allow-Headers "*"
+    </FilesMatch>
+</IfModule>

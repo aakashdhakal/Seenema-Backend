@@ -18,13 +18,17 @@ class Video extends Model
         'thumbnail_path',
         'duration',
         'user_id',
-        'category_id',
+        'category',
     ];
 
     protected $casts = [
         'bitrates' => 'array',
         'segment_sizes' => 'array',
     ];
+
+    const STATUS_PROCESSING = 'processing';
+    const STATUS_READY = 'ready';
+    const STATUS_FAILED = 'failed';
 
     // Relationships
     public function user()

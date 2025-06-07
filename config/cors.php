@@ -1,11 +1,11 @@
 <?php
 return [
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout', 'register', 'refresh', 'user'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'login', 'logout', 'register', 'refresh', 'user', 'upload-video', 'video/*', 'storage/*'],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000'], // NOT '*', only allow frontend
+    'allowed_origins' => ['http://localhost:3000'], // Remove the /* from the end
 
     'allowed_origins_patterns' => [],
 
@@ -15,6 +15,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true, // 🔥 VERY IMPORTANT 🔥
+    'supports_credentials' => true,
 
 ];

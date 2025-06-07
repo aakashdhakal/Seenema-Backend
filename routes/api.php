@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\VideoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -16,4 +17,9 @@ Route::get('/ping', function () {
 // Route::post('/logout', [AuthController::class, 'logout']);
 // Route::post('/refresh', [AuthController::class, 'refresh']);
 Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware('auth:sanctum');
-
+Route::post('/upload-video', [VideoController::class, 'videoUpload']);
+Route::get('/video/{id}', [VideoController::class, 'getVideo']);
+Route::get('/video/', [VideoController::class, 'getVideoSegments']);
+Route::get('/init/{id}', [VideoController::class, 'getInit']);
+Route::get('/segment/{videoId}/{segment}', [VideoController::class, 'getSegment']);
+Route::get('/manifest/{videoId}', [VideoController::class, 'getManifest']);
