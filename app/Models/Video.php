@@ -12,18 +12,18 @@ class Video extends Model
         'title',
         'description',
         'slug',
-        'manifest_path',
-        'bitrates',
-        'segment_sizes',
+        'resolutions',
         'thumbnail_path',
         'duration',
         'user_id',
         'category',
+        'rating',
+        'status',
+        'content_rating'
     ];
 
     protected $casts = [
-        'bitrates' => 'array',
-        'segment_sizes' => 'array',
+        'resolutions' => 'array',
     ];
 
     const STATUS_PROCESSING = 'processing';

@@ -12,18 +12,32 @@ return new class extends Migration {
     {
         Schema::create('videos', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
-            $table->string('title')->nullable();
-            $table->string('description')->nullable();
+            $table->string('title');
+            $table->text('description')->nullable();
             $table->string('slug')->unique();
-            $table->string('manifest_path')->nullable();
-            $table->json('bitrates')->nullable();
-            $table->json('segment_sizes')->nullable();
-            $table->string('thumbnail_path')->nullable();
-            $table->integer('duration')->default(0);
+
+            // Relationships
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('category')->default('default');
+            $table->string('category')->nullable();
+
+            // Video Metadata
+            $table->decimal('rating', 2, 1)->nullable(); // e.g. 4.5
+            $table->string('thumbnail_path')->nullable();
+            $table->string('content_rating')->nullable(); // e.g. 'PG', 'R', etc.
+
+            $table->integer('duration')->unsigned()->default(0); // in seconds
+
+            // Status & Encoding
             $table->enum('status', ['processing', 'ready', 'failed'])->default('processing');
+
+
+            // BOLA / Adaptive Bitrate Fields
+            $table->string('video_codec')->nullable();
+            $table->string('audio_codec')->nullable();
+            $table->decimal('frame_rate', 5, 2)->nullable();
+            $table->json('resolutions')->nullable(); // Stores array of {resolution, bitrate, etc.}
+
+            $table->timestamps();
         });
     }
 

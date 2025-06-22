@@ -20,6 +20,11 @@ Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware
 Route::post('/upload-video', [VideoController::class, 'videoUpload']);
 Route::get('/video/{id}', [VideoController::class, 'getVideo']);
 Route::get('/video/', [VideoController::class, 'getVideoSegments']);
-Route::get('/init/{id}', [VideoController::class, 'getInit']);
-Route::get('/segment/{videoId}/{segment}', [VideoController::class, 'getSegment']);
+Route::get('/init/{id}/{resolution}', [VideoController::class, 'getInit']);
+Route::get('/segment/{videoId}/{resolution}/{segment}', [VideoController::class, 'getSegment']);
 Route::get('/manifest/{videoId}', [VideoController::class, 'getManifest']);
+Route::get('/manifest/{videoId}/{resolution}', [VideoController::class, 'getManifestByResolution']);
+Route::get('/getSegmentSizes/{videoId}/{segment}', [VideoController::class, 'getSegmentSizes']);
+Route::get('/getIntroVideo/{resolution}', [VideoController::class, 'getIntroVideo']);
+Route::get('/getIntroInit/{resolution}', [VideoController::class, 'getIntroInit']);
+Route::get('/getIntroManifest/{resolution}', [VideoController::class, 'getIntroManifest']);
