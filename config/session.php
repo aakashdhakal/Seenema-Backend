@@ -156,7 +156,7 @@ return [
     |
     */
 
-    'domain' => '.localhost', // This allows sharing cookies across subdomains like localhost:8000 and localhost:3000
+    'domain' => 'localhost', // This allows sharing cookies across subdomains like localhost:8000 and localhost:3000
 
 
     /*

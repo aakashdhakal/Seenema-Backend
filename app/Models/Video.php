@@ -14,6 +14,7 @@ class Video extends Model
         'slug',
         'resolutions',
         'thumbnail_path',
+        'backdrop_path',
         'duration',
         'user_id',
         'category',

@@ -8,6 +8,8 @@ use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
+use Illuminate\Auth\Events\Verified;
+
 
 class AuthController extends Controller
 {
@@ -41,7 +43,6 @@ class AuthController extends Controller
         ]);
     }
 
-
     //register function
     public function register(Request $request)
     {
@@ -58,6 +59,7 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password),
         ]);
+        $user->sendEmailVerificationNotification();
 
         // Return success response
         return response()->json(['message' => 'User registered successfully'], 201);
@@ -112,6 +114,7 @@ class AuthController extends Controller
                     'google_id' => $googleUser->id,
                     'google_token' => $googleUser->token,
                     'google_refresh_token' => $googleUser->refreshToken,
+                    'email_verified_at' => now(), // Mark email as verified
                 ]);
             } else {
                 // Create a new user
@@ -122,17 +125,53 @@ class AuthController extends Controller
                     'google_token' => $googleUser->token,
                     'google_refresh_token' => $googleUser->refreshToken,
                     'password' => bcrypt(Str::random(16)), // temp password to satisfy not-null
+                    'email_verified_at' => now(), // Mark email as verified
                 ]);
             }
 
             Auth::login($user, remember: true);
 
             // Redirect back to frontend dashboard
-            return redirect('http://localhost:3000/dashboard?id=' . $googleUser->id);
+            return redirect('http://localhost:3000/home');
         } catch (\Throwable $e) {
             return redirect('http://localhost:3000/login?error=GoogleLoginFailed' . $e->getMessage());
         }
     }
 
+    public function verifyEmail(Request $request, $id, $hash)
+    {
+        $user = User::find($id);
+        // Check if user exists and the hash is correct
+        if (!$user || !hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/email-verification-failed');
+        }
+        // Check if the email is already verified
+        if ($user->hasVerifiedEmail()) {
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?verified=1');
+        }
+
+        // Mark the email as verified and fire the event
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+        // Redirect to the login page on your frontend with a success message
+        return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?verified=1');
+    }
+
+    public function sendVerificationEmail(Request $request)
+    {
+        $user = $request->user();
+        if ($user && !$user->hasVerifiedEmail()) {
+            $user->sendEmailVerificationNotification();
+            return response()->json([
+                'message' => 'Verification link sent!',
+                'status' => 200
+            ]);
+        }
+        return response()->json([
+            'message' => 'Email already verified or user not authenticated.',
+            'status' => 400
+        ], 400);
+    }
 
 }

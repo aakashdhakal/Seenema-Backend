@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\VideoController;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Laravel\Socialite\Facades\Socialite;
+
+
+
 
 Route::get('/ping', function () {
     return response()->json([
@@ -12,11 +14,28 @@ Route::get('/ping', function () {
     ]);
 });
 
-// Route::post('/login', [AuthController::class, 'login']);
-// Route::post('/register', [AuthController::class, 'register']);
-// Route::post('/logout', [AuthController::class, 'logout']);
-// Route::post('/refresh', [AuthController::class, 'refresh']);
+
+// Authentication routes
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/refresh', [AuthController::class, 'refresh']);
 Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware('auth:sanctum');
+
+//email verification routes
+Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['signed'])->name('verification.verify');
+
+Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])->middleware(['throttle:6,1'])->name('verification.send');
+
+
+// oauth routes
+Route::get('/auth/google/redirect', function () {
+    return Socialite::driver('google')->redirect();
+});
+
+Route::get('/auth/callback', [AuthController::class, 'handleGoogleCallback']);
+
+// video routes
 Route::post('/upload-video', [VideoController::class, 'videoUpload']);
 Route::get('/video/{id}', [VideoController::class, 'getVideo']);
 Route::get('/video/', [VideoController::class, 'getVideoSegments']);

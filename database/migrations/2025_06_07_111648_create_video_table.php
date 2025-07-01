@@ -23,6 +23,7 @@ return new class extends Migration {
             // Video Metadata
             $table->decimal('rating', 2, 1)->nullable(); // e.g. 4.5
             $table->string('thumbnail_path')->nullable();
+            $table->string('backdrop_path')->nullable();
             $table->string('content_rating')->nullable(); // e.g. 'PG', 'R', etc.
 
             $table->integer('duration')->unsigned()->default(0); // in seconds

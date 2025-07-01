@@ -179,6 +179,15 @@ class VideoController extends Controller
         if ($request->hasFile('video') && $request->file('video')->isValid()) {
             $videoId = rand(100000, 999999); // Generate a random video ID, you can also use UUID
             $videoPath = $request->file('video')->storeAs("videos/$videoId", "$videoId." . $request->file('video')->getClientOriginalExtension(), 'public');
+
+            $posterExtension = $request->file('poster')->getClientOriginalExtension();
+            $posterPath = $request->file('poster')->storeAs("videos/$videoId/poster", "$videoId.$posterExtension", 'public'); // Store poster image if provided
+
+            $backdropExtension = $request->file('backdrop')->getClientOriginalExtension();
+            $backdropPath = $request->file('backdrop')->storeAs("videos/$videoId/backdrop", "$videoId.$backdropExtension", 'public'); // Store backdrop image if provided
+
+
+
             // Split video into HLS segments (.ts) and generate manifest.m3u8
             $outputDir = storage_path("app/public/videos/$videoId");
             $inputPath = storage_path("app/public/$videoPath"); // Convert to absolute path
@@ -193,11 +202,13 @@ class VideoController extends Controller
                 $video->slug = Str::slug($video->title);
                 $video->resolutions = $splitResult['resolutions']; // You can populate this with actual bitrate data if needed
                 // Set paths for manifest and segments
-                $video->thumbnail_path = ''; // Set thumbnail path if available
+                $video->thumbnail_path = $posterPath; // Set thumbnail path if available
+                $video->backdrop_path = $backdropPath; // Set backdrop path if available
                 $video->duration = $this->getVideoDuration($inputPath); // Set duration if available
                 $video->user_id = "1"; // Assuming user is authenticated
                 $video->category = $request->input('category', 'default'); // Set category if provided
                 $video->status = Video::STATUS_READY; // Set initial status
+
                 $video->save();
 
                 return response()->json(['message' => 'Video uploaded and processed successfully.', 'video_id' => $videoId], 200);
