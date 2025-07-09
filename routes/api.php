@@ -1,11 +1,14 @@
 <?php
 
+use App\Http\Controllers\SegmentController;
 use App\Http\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WatchHistoryController;
 use Laravel\Socialite\Facades\Socialite;
-
-
+use App\Http\Controllers\PersonController;
+use App\Http\Controllers\GenreController;
+use App\Http\Controllers\TagController;
 
 
 Route::get('/ping', function () {
@@ -36,14 +39,44 @@ Route::get('/auth/google/redirect', function () {
 Route::get('/auth/callback', [AuthController::class, 'handleGoogleCallback']);
 
 // video routes
-Route::post('/upload-video', [VideoController::class, 'videoUpload']);
+Route::post('/uploadVideo', [VideoController::class, 'videoUpload']);
 Route::get('/video/{id}', [VideoController::class, 'getVideo']);
-Route::get('/video/', [VideoController::class, 'getVideoSegments']);
-Route::get('/init/{id}/{resolution}', [VideoController::class, 'getInit']);
-Route::get('/segment/{videoId}/{resolution}/{segment}', [VideoController::class, 'getSegment']);
-Route::get('/manifest/{videoId}', [VideoController::class, 'getManifest']);
-Route::get('/manifest/{videoId}/{resolution}', [VideoController::class, 'getManifestByResolution']);
-Route::get('/getSegmentSizes/{videoId}/{segment}', [VideoController::class, 'getSegmentSizes']);
-Route::get('/getIntroVideo/{resolution}', [VideoController::class, 'getIntroVideo']);
-Route::get('/getIntroInit/{resolution}', [VideoController::class, 'getIntroInit']);
-Route::get('/getIntroManifest/{resolution}', [VideoController::class, 'getIntroManifest']);
+Route::get('/getVideoStatus/{videoId}', [VideoController::class, 'getVideoStatus']);
+Route::delete('/deleteVideo/{videoId}', [VideoController::class, 'deleteVideo']);
+
+//segment routes
+Route::get('/video/', [SegmentController::class, 'getVideoSegments']);
+Route::get('/init/{id}/{resolution}', [SegmentController::class, 'getInit']);
+Route::get('/segment/{videoId}/{resolution}/{segment}', [SegmentController::class, 'getSegment']);
+Route::get('/manifest/{videoId}', [SegmentController::class, 'getManifest']);
+Route::get('/manifest/{videoId}/{resolution}', [SegmentController::class, 'getManifestByResolution']);
+Route::get('/getSegmentSizes/{videoId}/{segment}', [SegmentController::class, 'getSegmentSizes']);
+Route::get('/getIntroVideo/{resolution}', [SegmentController::class, 'getIntroVideo']);
+Route::get('/getIntroInit/{resolution}', [SegmentController::class, 'getIntroInit']);
+Route::get('/getIntroManifest/{resolution}', [SegmentController::class, 'getIntroManifest']);
+
+
+// Video Recommendation Routes
+Route::get('/recommendations/{videoId}', [VideoController::class, 'getRecommendations']);
+Route::get('/getAllVideos', [VideoController::class, 'getAllVideos']);
+
+// Watch History Routes (Protected)
+Route::get('/history', [WatchHistoryController::class, 'getHistory']);
+Route::get('/history/resume/{videoId}', [WatchHistoryController::class, 'getResumePoint']);
+Route::post('/updateWatchHistory/{videoId}', [WatchHistoryController::class, 'updateProgress']);
+Route::delete('/history/remove/{videoId}', [WatchHistoryController::class, 'removeHistoryItem']);
+Route::delete('/history/clear', [WatchHistoryController::class, 'clearHistory']);
+
+//Person credits route
+Route::get('/getPeople', [PersonController::class, 'getPeople']);
+Route::post('/addPerson', [PersonController::class, 'addPerson']);
+Route::post('/addCreditsToVideo', [PersonController::class, 'addPersonToVideo']);
+
+//Genre Routes
+Route::get('/getGenres', [GenreController::class, 'getAllGenres']);
+Route::post('/addGenreToVideo', [GenreController::class, 'addGenreToVideo']);
+
+// Tag Routes
+Route::post('/addTagsToVideo', [TagController::class, 'addTagsToVideo']);
+// Route::get('/getTags', [TagController::class, 'getAllTags']);
+

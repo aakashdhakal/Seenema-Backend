@@ -28,6 +28,8 @@ class GenerateIntroSegments extends Command
             ['label' => '480p', 'resolution' => '854x480', 'bitrate' => '1000k', 'audio_bitrate' => '96k'],
             ['label' => '720p', 'resolution' => '1280x720', 'bitrate' => '2500k', 'audio_bitrate' => '128k'],
             ['label' => '1080p', 'resolution' => '1920x1080', 'bitrate' => '5000k', 'audio_bitrate' => '192k'],
+            ['label' => '1440p', 'resolution' => '2560x1440', 'bitrate' => '10000k', 'audio_bitrate' => '256k'],
+            ['label' => '2160p', 'resolution' => '3840x2160', 'bitrate' => '20000k', 'audio_bitrate' => '320k'],
         ];
 
         $introOutputDir = storage_path('app/public/videos/intro');

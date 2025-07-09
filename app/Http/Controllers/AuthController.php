@@ -51,6 +51,7 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Make profile picture optional
         ]);
 
         // Create a new user
@@ -59,11 +60,18 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => bcrypt($request->password),
         ]);
+
+        // Handle profile picture upload if it exists
+        if ($request->hasFile('profile_picture')) {
+            $path = $request->file('profile_picture')->storeAs('images/', 'public');
+            $user->profile_picture = $path;
+            $user->save();
+        }
+
         $user->sendEmailVerificationNotification();
 
         // Return success response
         return response()->json(['message' => 'User registered successfully'], 201);
-
     }
 
     //logout function
@@ -106,15 +114,17 @@ class AuthController extends Controller
     {
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
-
+            $adminEmail = env('GOOGLE_ADMIN_EMAIL');
+            $appUrl = env('APP_URL', 'http://localhost:8000');
             $user = User::where('email', $googleUser->email)->first();
             if ($user) {
                 // Update existing user
                 $user->update([
+                    'name' => $googleUser->name,
                     'google_id' => $googleUser->id,
                     'google_token' => $googleUser->token,
                     'google_refresh_token' => $googleUser->refreshToken,
-                    'email_verified_at' => now(), // Mark email as verified
+                    "role" => $googleUser->email === $adminEmail ? 'admin' : 'user', // Set role based on email
                 ]);
             } else {
                 // Create a new user
@@ -125,19 +135,43 @@ class AuthController extends Controller
                     'google_token' => $googleUser->token,
                     'google_refresh_token' => $googleUser->refreshToken,
                     'password' => bcrypt(Str::random(16)), // temp password to satisfy not-null
-                    'email_verified_at' => now(), // Mark email as verified
+                    'role' => $googleUser->email === $adminEmail ? 'admin' : 'user', // Set role based on email
                 ]);
+            }
+
+            //mark email as verified
+            $user->email_verified_at = now(); // Mark email as verified
+            $user->save();
+
+            // Add or update the profile picture from Google for both new and existing users
+            if ($googleUser->avatar) {
+                $imageContents = file_get_contents($googleUser->avatar);
+                if ($imageContents) {
+                    $imagePath = $appUrl . '/storage/profile_pictures/' . $user->id . '_' . time() . '.jpg';
+                    \Storage::disk('public')->put($imagePath, $imageContents);
+
+                    // Delete old picture if it exists
+                    if ($user->profile_picture && \Storage::disk('public')->exists($user->profile_picture)) {
+                        \Storage::disk('public')->delete($user->profile_picture);
+                    }
+
+                    $user->profile_picture = $imagePath;
+                    $user->save();
+                }
             }
 
             Auth::login($user, remember: true);
 
-            // Redirect back to frontend dashboard
+            // Create a token for the user to be used by the frontend
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+            // Redirect back to frontend with the token
             return redirect('http://localhost:3000/home');
         } catch (\Throwable $e) {
-            return redirect('http://localhost:3000/login?error=GoogleLoginFailed' . $e->getMessage());
+            \Log::error('Google Login Failed: ' . $e->getMessage());
+            return redirect('http://localhost:3000/login?error=GoogleLoginFailed');
         }
     }
-
     public function verifyEmail(Request $request, $id, $hash)
     {
         $user = User::find($id);

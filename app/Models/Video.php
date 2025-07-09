@@ -17,10 +17,12 @@ class Video extends Model
         'backdrop_path',
         'duration',
         'user_id',
-        'category',
         'rating',
         'status',
-        'content_rating'
+        'content_rating',
+        'language',
+        'visibility',
+        'release_date',
     ];
 
     protected $casts = [
@@ -35,6 +37,20 @@ class Video extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function tags()
+    {
+        return $this->belongsToMany(Tag::class, 'tag_video');
+    }
+    public function people()
+    {
+        return $this->belongsToMany(Person::class, 'credits')
+            ->withPivot('credited_as')
+            ->withTimestamps();
+    }
+    public function genres()
+    {
+        return $this->belongsToMany(Genre::class, 'video_genres');
     }
 
 }
