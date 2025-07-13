@@ -33,63 +33,97 @@ class VideoController extends Controller
 
 
     // Function handle video upload
-    public function videoUpload(Request $request)
+    public function createVideoEntry(Request $request)
     {
-        if ($request->hasFile('video') && $request->file('video')->isValid()) {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'poster' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'backdrop' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'original_filename' => 'required|string|max:255',
+            'releaseYear' => 'nullable|integer',
+            'contentRating' => 'nullable|string',
+            'visibility' => 'required|string',
+            'language' => 'required|string',
+        ]);
 
-            $appUrl = env('APP_URL');
+        $appUrl = env('APP_URL');
+        // Use UUID for a more robust and collision-resistant unique ID
+        $videoId = random_int(100000, 999999); // Generate a random 6-digit number
 
-            $videoId = rand(100000, 999999);
-            $videoPath = $request->file('video')->storeAs("videos/$videoId", "$videoId." . $request->file('video')->getClientOriginalExtension(), 'public');
+        $posterPath = $request->file('poster')->store("images/{$videoId}/poster", 'public');
+        $backdropPath = $request->file('backdrop')->store("images/{$videoId}/backdrop", 'public');
 
+        $video = new Video();
+        $video->id = $videoId;
+        $video->title = $validated['title'];
+        $video->description = $validated['description'] ?? '';
+        $video->slug = Str::slug($validated['title']) . '-' . $videoId;
+        $video->original_filename = $validated['original_filename'];
+        $video->thumbnail_path = "$appUrl/storage/$posterPath";
+        $video->backdrop_path = "$appUrl/storage/$backdropPath";
+        $video->user_id = Auth::id();
+        $video->status = Video::STATUS_UPLOADING; // New status
+        $video->release_year = $validated['releaseYear'];
+        $video->content_rating = $validated['contentRating'];
+        $video->visibility = $validated['visibility'];
+        $video->language = $validated['language'];
+        $video->save();
 
-            $posterExtension = $request->file('poster')->getClientOriginalExtension();
-            $posterPath = $request->file('poster')->storeAs("images/$videoId/poster", "$videoId.$posterExtension", 'public');
+        return response()->json(['video_id' => $video->id], 201);
+    }
 
-            $backdropExtension = $request->file('backdrop')->getClientOriginalExtension();
-            $backdropPath = $request->file('backdrop')->storeAs("images/$videoId/backdrop", "$videoId.$backdropExtension", 'public');
+    /**
+     * Step 2: Receive and assemble file chunks.
+     */
+    public function uploadChunk(Request $request)
+    {
+        $request->validate([
+            'video_id' => 'required|string|exists:videos,id',
+            'chunk' => 'required|file',
+        ]);
 
-            // Create video record with PROCESSING status
-            $video = new Video();
-            $video->id = $videoId;
-            $video->title = $request->input('title', 'video' . $videoId);
-            $video->description = $request->input('description', '');
-            $video->slug = Str::slug($video->title);
-            $video->thumbnail_path = "$appUrl/storage/$posterPath";
-            $video->backdrop_path = "$appUrl/storage/$backdropPath";
-            $video->user_id = Auth::id(); // Assuming you have user authentication
-            $video->content_rating = $request->input('content_rating', 'PG'); // Default to PG if not provided
-            $video->description = $request->input('description', '');
-            $video->slug = Str::slug($video->title);
-            $video->thumbnail_path = "$appUrl/storage/$posterPath";
-            $video->backdrop_path = "$appUrl/storage/$backdropPath";
-            $video->user_id = Auth::id(); // Assuming you have user authentication
-            $video->content_rating = $request->input('content_rating', 'PG'); // Default to PG if not provided
+        $video = Video::findOrFail($request->video_id);
+        $chunk = $request->file('chunk');
+        $videoDirectory = "videos/{$video->id}";
+        $finalPath = "{$videoDirectory}/{$video->id}";
 
-            $video->language = $request->input('language', 'en'); // Default to English if not provided
-            $video->release_year = $request->input('releaseYear', null); // Optional release date
+        // --- MEMORY-SAFE CHUNK APPENDING ---
+        // Get the path to the temporary uploaded chunk file
+        $chunkPath = $chunk->getRealPath();
 
-            $video->status = Video::STATUS_PROCESSING; // Set to processing
-            $video->duration = $this->getVideoDuration(storage_path("app/public/$videoPath"));
+        // Get the full destination path on the 'public' disk
+        $destinationPath = Storage::disk('public')->path($finalPath);
 
+        // Ensure the destination directory exists
+        Storage::disk('public')->makeDirectory($videoDirectory);
 
+        // Open the destination file in append mode and the chunk in read mode
+        $destinationStream = fopen($destinationPath, 'a');
+        $sourceStream = fopen($chunkPath, 'r');
 
+        // Copy the contents of the chunk stream to the destination stream
+        stream_copy_to_stream($sourceStream, $destinationStream);
+
+        // Close the file handles
+        fclose($sourceStream);
+        fclose($destinationStream);
+        // --- END OF MEMORY-SAFE CODE ---
+
+        if ($request->boolean('is_last')) {
+            $fullPath = Storage::disk('public')->path($finalPath);
+            $outputDir = Storage::disk('public')->path($videoDirectory);
+
+            $video->status = Video::STATUS_PROCESSING;
+            $video->duration = $this->getVideoDuration($fullPath);
             $video->save();
 
-            // Dispatch the job to process video in background
-            $outputDir = storage_path("app/public/videos/$videoId");
-            $inputPath = storage_path("app/public/$videoPath");
+            ProcessVideo::dispatch($video->id, $fullPath, $outputDir);
 
-            ProcessVideo::dispatch($videoId, $inputPath, $outputDir);
-
-            return response()->json([
-                'message' => 'Video uploaded successfully. Processing started in background.',
-                'video_id' => $videoId,
-                'status' => 'processing'
-            ], 200);
+            return response()->json(['message' => 'Upload complete, processing started.']);
         }
 
-        return response()->json(['message' => 'No valid video file uploaded'], 400);
+        return response()->json(['message' => 'Chunk uploaded successfully.']);
     }
 
     public function getVideo($videoId)
@@ -162,6 +196,119 @@ class VideoController extends Controller
     {
         $videos = Video::with('user', 'tags', 'genres', 'people')->get();
         return response()->json($videos);
+    }
+
+    public function getFeaturedVideo()
+    {
+        $video = Video::where('status', Video::STATUS_READY)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$video) {
+            return response()->json(['message' => 'No featured video found'], 404);
+        }
+
+        return response()->json($video, 200);
+    }
+
+    public function getTrendingVideos()
+    {
+        // For a Netflix-style "Trending Now", we can use recently added videos.
+        // For now, per request, we return a random selection of ready videos.
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        if ($videos->isEmpty()) {
+            return response()->json([], 200);
+        }
+
+        return response()->json($videos, 200);
+    }
+
+    public function getPopularVideos()
+    {
+        // For a Netflix-style "Popular on Netflix", this could be based on a more complex algorithm.
+        // For now, per request, we return a different random selection of ready videos.
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        if ($videos->isEmpty()) {
+            return response()->json([], 200);
+        }
+
+        return response()->json($videos, 200);
+    }
+
+    public function getNewReleases()
+    {
+        // For a Netflix-style "New Releases", we can fetch videos added in the last 30 days.
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        if ($videos->isEmpty()) {
+            return response()->json([], 200);
+        }
+
+        return response()->json($videos, 200);
+    }
+
+    public function getVideoByCategory($category)
+    {
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->whereHas('genres', function ($query) use ($category) {
+                // Assuming the genres table has a 'name' or 'slug' column to filter by.
+                // Using 'name' as an example.
+                $query->where('name', $category);
+            })
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        if ($videos->isEmpty()) {
+            return response()->json(['message' => 'No videos found for this category'], 404);
+        }
+
+        return response()->json($videos, 200);
+    }
+
+    //get continue watching
+    public function getContinueWatching()
+    {
+        $userId = Auth::id();
+        $watchHistory = WatchHistory::with('video')
+            ->where('user_id', $userId)
+            ->whereHas('video', function ($query) {
+                $query->where('status', Video::STATUS_READY);
+            })
+            ->orderBy('updated_at', 'desc')
+            ->take(10)
+            ->get();
+
+        return response()->json($watchHistory, 200);
+    }
+
+    public function getVideoById($id)
+    {
+        $video = Video::with('user', 'tags', 'genres', 'people')
+            ->where('slug', $id)
+            ->first();
+
+        if (!$video) {
+            return response()->json(['message' => 'Video not found'], 404);
+        }
+
+        return response()->json($video, 200);
     }
 
     public function deleteVideo($videoId)

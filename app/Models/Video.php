@@ -23,6 +23,7 @@ class Video extends Model
         'language',
         'visibility',
         'release_date',
+        'original_filename'
     ];
 
     protected $casts = [
@@ -32,6 +33,8 @@ class Video extends Model
     const STATUS_PROCESSING = 'processing';
     const STATUS_READY = 'ready';
     const STATUS_FAILED = 'failed';
+
+    const STATUS_UPLOADING = 'uploading';
 
     // Relationships
     public function user()

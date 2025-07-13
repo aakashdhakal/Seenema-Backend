@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
+use App\Events\VideoProcessingStatusChanged;
 use Log;
 
 class ProcessVideo implements ShouldQueue
@@ -29,45 +30,47 @@ class ProcessVideo implements ShouldQueue
 
     public function handle(): void
     {
+        $video = Video::find($this->videoId);
+        if (!$video) {
+            Log::error("Video not found for processing: {$this->videoId}");
+            return;
+        }
+
         try {
             Log::info("Starting video processing for video ID: {$this->videoId}");
+            // 1. Notify: Processing has started
+            broadcast(new VideoProcessingStatusChanged($video, 'processing', 'Processing started...'))->toOthers();
 
             $splitResult = $this->splitVideosToSegments($this->inputPath, $this->outputDir);
 
             if ($splitResult['status']) {
-                // Update video status to ready
-                $video = Video::find($this->videoId);
-                if ($video) {
-                    $video->status = Video::STATUS_READY;
-                    $video->resolutions = $splitResult['resolutions'];
-                    $video->save();
-                }
+                $video->status = Video::STATUS_READY;
+                $video->resolutions = $splitResult['resolutions'];
+                $video->save();
 
+                // 2. Notify: Processing was successful
+                broadcast(new VideoProcessingStatusChanged($video, 'ready', 'Your video is ready!'))->toOthers();
                 Log::info("Video processing completed for video ID: {$this->videoId}");
-            } else {
-                // Update video status to failed
-                $video = Video::find($this->videoId);
-                if ($video) {
-                    $video->status = Video::STATUS_FAILED;
-                    $video->save();
-                }
 
+            } else {
+                $video->status = Video::STATUS_FAILED;
+                $video->save();
+
+                // 3. Notify: Processing failed
+                broadcast(new VideoProcessingStatusChanged($video, 'failed', 'Processing failed.'))->toOthers();
                 Log::error("Video processing failed for video ID: {$this->videoId}", [
                     'error' => $splitResult['error']
                 ]);
             }
         } catch (\Exception $e) {
+            $video->status = Video::STATUS_FAILED;
+            $video->save();
+
+            // 4. Notify: A critical error occurred
+            broadcast(new VideoProcessingStatusChanged($video, 'failed', 'A critical error occurred.'))->toOthers();
             Log::error("Exception in video processing job for video ID: {$this->videoId}", [
                 'exception' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
-
-            // Update video status to failed
-            $video = Video::find($this->videoId);
-            if ($video) {
-                $video->status = Video::STATUS_FAILED;
-                $video->save();
-            }
         }
     }
 

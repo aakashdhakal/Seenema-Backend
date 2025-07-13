@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\SegmentController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -9,6 +10,7 @@ use Laravel\Socialite\Facades\Socialite;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\TagController;
+use Illuminate\Http\Request;
 
 
 Route::get('/ping', function () {
@@ -25,6 +27,7 @@ Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/refresh', [AuthController::class, 'refresh']);
 Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware('auth:sanctum');
 
+
 //email verification routes
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['signed'])->name('verification.verify');
 
@@ -39,10 +42,21 @@ Route::get('/auth/google/redirect', function () {
 Route::get('/auth/callback', [AuthController::class, 'handleGoogleCallback']);
 
 // video routes
-Route::post('/uploadVideo', [VideoController::class, 'videoUpload']);
-Route::get('/video/{id}', [VideoController::class, 'getVideo']);
+Route::post('/createVideoEntry', [VideoController::class, 'createVideoEntry']);
+Route::post('/uploadVideoChunk', [VideoController::class, 'uploadChunk']);
+
+Route::get('/getVideo/{id}', [VideoController::class, 'getVideo']);
 Route::get('/getVideoStatus/{videoId}', [VideoController::class, 'getVideoStatus']);
 Route::delete('/deleteVideo/{videoId}', [VideoController::class, 'deleteVideo']);
+
+// Video display for users routes
+Route::get('/getFeaturedVideo', [VideoController::class, 'getFeaturedVideo']);
+Route::get('/getTrendingVideos', [VideoController::class, 'getTrendingVideos']);
+Route::get('/getPopularVideos', [VideoController::class, 'getPopularVideos']);
+Route::get('/getNewReleases', [VideoController::class, 'getNewReleases']);
+Route::get('/getVideosByCategory/{category}', [VideoController::class, 'getVideoByCategory']);
+Route::get('/getContinueWatching', [VideoController::class, 'getContinueWatching']);
+Route::get('/getVideoById/{videoId}', [VideoController::class, 'getVideoById']);
 
 //segment routes
 Route::get('/video/', [SegmentController::class, 'getVideoSegments']);
@@ -63,13 +77,13 @@ Route::get('/getAllVideos', [VideoController::class, 'getAllVideos']);
 // Watch History Routes (Protected)
 Route::get('/history', [WatchHistoryController::class, 'getHistory']);
 Route::get('/history/resume/{videoId}', [WatchHistoryController::class, 'getResumePoint']);
-Route::post('/updateWatchHistory/{videoId}', [WatchHistoryController::class, 'updateProgress']);
+Route::post('/updateWatchHistory', [WatchHistoryController::class, 'updateProgress']);
 Route::delete('/history/remove/{videoId}', [WatchHistoryController::class, 'removeHistoryItem']);
 Route::delete('/history/clear', [WatchHistoryController::class, 'clearHistory']);
 
 //Person credits route
 Route::get('/getPeople', [PersonController::class, 'getPeople']);
-Route::post('/addPerson', [PersonController::class, 'addPerson']);
+Route::post('/addPerson', [PersonController::class, 'createPerson']);
 Route::post('/addCreditsToVideo', [PersonController::class, 'addPersonToVideo']);
 
 //Genre Routes
@@ -79,4 +93,8 @@ Route::post('/addGenreToVideo', [GenreController::class, 'addGenreToVideo']);
 // Tag Routes
 Route::post('/addTagsToVideo', [TagController::class, 'addTagsToVideo']);
 // Route::get('/getTags', [TagController::class, 'getAllTags']);
+
+//Users Route
+Route::get('/getUsers', [UserController::class, 'getAllUsers']);
+
 

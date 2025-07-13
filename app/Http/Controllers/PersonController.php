@@ -20,7 +20,7 @@ class PersonController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:people,name',
             'biography' => 'nullable|string',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
         $appUrl = env('APP_URL');
 

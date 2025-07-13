@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     libpng-dev \
     libxml2-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
     zip \
     unzip
 
@@ -37,17 +40,20 @@ RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     ffmpeg \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libzip-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql exif pcntl bcmath gd zip
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_mysql exif pcntl bcmath gd zip
 
 # Copy application files from the builder stage
 COPY --from=builder /var/www .
 
 # Copy Nginx and Supervisor configurations
-# These files should be in a 'docker' directory in your project root
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 

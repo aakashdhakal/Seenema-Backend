@@ -69,6 +69,7 @@ class AuthController extends Controller
         }
 
         $user->sendEmailVerificationNotification();
+        Auth::login($user, remember: true);
 
         // Return success response
         return response()->json(['message' => 'User registered successfully'], 201);
@@ -147,15 +148,14 @@ class AuthController extends Controller
             if ($googleUser->avatar) {
                 $imageContents = file_get_contents($googleUser->avatar);
                 if ($imageContents) {
-                    $imagePath = $appUrl . '/storage/profile_pictures/' . $user->id . '_' . time() . '.jpg';
-                    \Storage::disk('public')->put($imagePath, $imageContents);
+                    // FIX 1: Define a relative path for storing the file.
+                    $relativePath = 'images/profile_pictures/' . $user->id . '_' . '.jpg';
 
-                    // Delete old picture if it exists
-                    if ($user->profile_picture && \Storage::disk('public')->exists($user->profile_picture)) {
-                        \Storage::disk('public')->delete($user->profile_picture);
-                    }
+                    // FIX 2: Use the relative path to store the file on the 'public' disk.
+                    \Storage::disk('public')->put($relativePath, $imageContents);
 
-                    $user->profile_picture = $imagePath;
+                    // FIX 3: Store the full, publicly accessible URL in the database.
+                    $user->profile_picture = \Storage::disk('public')->url($relativePath);
                     $user->save();
                 }
             }
@@ -169,7 +169,7 @@ class AuthController extends Controller
             return redirect('http://localhost:3000/home');
         } catch (\Throwable $e) {
             \Log::error('Google Login Failed: ' . $e->getMessage());
-            return redirect('http://localhost:3000/login?error=GoogleLoginFailed');
+            return redirect("http://localhost:3000/login?error=" . urlencode($e->getMessage()));
         }
     }
     public function verifyEmail(Request $request, $id, $hash)
@@ -181,7 +181,7 @@ class AuthController extends Controller
         }
         // Check if the email is already verified
         if ($user->hasVerifiedEmail()) {
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?verified=1');
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
         }
 
         // Mark the email as verified and fire the event
@@ -189,7 +189,7 @@ class AuthController extends Controller
             event(new Verified($user));
         }
         // Redirect to the login page on your frontend with a success message
-        return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?verified=1');
+        return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
     }
 
     public function sendVerificationEmail(Request $request)

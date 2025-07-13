@@ -42,14 +42,15 @@ class WatchHistoryController extends Controller
     }
 
 
-    public function updateProgress(Request $request, $videoId)
+    public function updateProgress(Request $request)
     {
         $request->validate([
             'currentTime' => 'required|numeric|min:0',
+            'videoId' => 'required|exists:videos,id',
         ]);
 
         $user = Auth::user();
-        $video = Video::findOrFail($videoId);
+        $video = Video::findOrFail($request->input('videoId'));
         $currentTime = $request->input('currentTime');
 
         // Use updateOrCreate to handle both new and existing records efficiently
