@@ -61,8 +61,8 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
     && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
-# Expose port 80 for Nginx
-EXPOSE 80
+# Expose port 5003 for Nginx
+EXPOSE 5003
 
 # Start Supervisor to manage Nginx and PHP-FPM
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
