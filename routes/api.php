@@ -19,6 +19,10 @@ Route::get('/ping', function () {
     ]);
 });
 
+Route::get('/health', function () {
+    return response()->json(['status' => 'OK'], 200);
+});
+
 
 // Authentication routes
 Route::post('/login', [AuthController::class, 'login']);
