@@ -10,6 +10,8 @@ use Laravel\Socialite\Facades\Socialite;
 use App\Http\Controllers\PersonController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\WatchListController;
+use App\Http\Controllers\FavouritesController;
 use Illuminate\Http\Request;
 
 
@@ -49,7 +51,8 @@ Route::get('/auth/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::post('/createVideoEntry', [VideoController::class, 'createVideoEntry']);
 Route::post('/uploadVideoChunk', [VideoController::class, 'uploadChunk']);
 
-Route::get('/getVideo/{id}', [VideoController::class, 'getVideo']);
+Route::get('/getVideoBySlug/{slug}', [VideoController::class, 'getVideoBySlug']);
+Route::get('/getVideoById/{id}', [VideoController::class, 'getVideoById']);
 Route::get('/getVideoStatus/{videoId}', [VideoController::class, 'getVideoStatus']);
 Route::delete('/deleteVideo/{videoId}', [VideoController::class, 'deleteVideo']);
 
@@ -61,6 +64,7 @@ Route::get('/getNewReleases', [VideoController::class, 'getNewReleases']);
 Route::get('/getVideosByCategory/{category}', [VideoController::class, 'getVideoByCategory']);
 Route::get('/getContinueWatching', [VideoController::class, 'getContinueWatching']);
 Route::get('/getVideoById/{videoId}', [VideoController::class, 'getVideoById']);
+Route::post('/submitRating', [VideoController::class, 'submitRating']);
 
 //segment routes
 Route::get('/video/', [SegmentController::class, 'getVideoSegments']);
@@ -75,7 +79,7 @@ Route::get('/getIntroManifest/{resolution}', [SegmentController::class, 'getIntr
 
 
 // Video Recommendation Routes
-Route::get('/recommendations/{videoId}', [VideoController::class, 'getRecommendations']);
+Route::get('/getRecommendations', [VideoController::class, 'getRecommendations']);
 Route::get('/getAllVideos', [VideoController::class, 'getAllVideos']);
 
 // Watch History Routes (Protected)
@@ -101,4 +105,10 @@ Route::post('/addTagsToVideo', [TagController::class, 'addTagsToVideo']);
 //Users Route
 Route::get('/getUsers', [UserController::class, 'getAllUsers']);
 
+Route::post('/watchlist/add', [WatchListController::class, 'addToWatchList']);
+Route::post('/watchlist/remove', [WatchListController::class, 'removeFromWatchList']);
+Route::get('/watchlist', [WatchListController::class, 'getWatchList']);
 
+Route::post('/favourites/add', [FavouritesController::class, 'addToFavourites']);
+Route::post('/favourites/remove', [FavouritesController::class, 'removeFromFavourites']);
+Route::get('/favourites', [FavouritesController::class, 'getFavourites']);

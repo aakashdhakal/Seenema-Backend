@@ -38,8 +38,6 @@ class ProcessVideo implements ShouldQueue
 
         try {
             Log::info("Starting video processing for video ID: {$this->videoId}");
-            // 1. Notify: Processing has started
-            broadcast(new VideoProcessingStatusChanged($video, 'processing', 'Processing started...'))->toOthers();
 
             $splitResult = $this->splitVideosToSegments($this->inputPath, $this->outputDir);
 
@@ -48,8 +46,14 @@ class ProcessVideo implements ShouldQueue
                 $video->resolutions = $splitResult['resolutions'];
                 $video->save();
 
-                // 2. Notify: Processing was successful
-                broadcast(new VideoProcessingStatusChanged($video, 'ready', 'Your video is ready!'))->toOthers();
+                // 2. Notify: Processing was successful - include resolutions in broadcast
+                broadcast(new VideoProcessingStatusChanged(
+                    $video,
+                    'ready',
+                    'Your video is ready!',
+                    ($splitResult['resolutions']) // Pass count of resolutions to event
+                ))->toOthers();
+
                 Log::info("Video processing completed for video ID: {$this->videoId}");
 
             } else {
@@ -65,7 +69,6 @@ class ProcessVideo implements ShouldQueue
         } catch (\Exception $e) {
             $video->status = Video::STATUS_FAILED;
             $video->save();
-
             // 4. Notify: A critical error occurred
             broadcast(new VideoProcessingStatusChanged($video, 'failed', 'A critical error occurred.'))->toOthers();
             Log::error("Exception in video processing job for video ID: {$this->videoId}", [
@@ -77,14 +80,26 @@ class ProcessVideo implements ShouldQueue
     public function splitVideosToSegments($videoPath, $outputDir)
     {
         try {
-            $ffmpegPath = env('FFMPEG_PATH'); // Path to ffmpeg binary
-            $ffprobePath = env('FFPROBE_PATH', 'ffprobe'); // Path to ffprobe binary
+            $ffmpegPath = env('FFMPEG_PATH');
+            $ffprobePath = env('FFPROBE_PATH', 'ffprobe');
 
-            // Step 1: Get original video resolution
-            $ffprobeCmd = "$ffprobePath -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x \"$videoPath\"";
-            $resolutionOutput = shell_exec($ffprobeCmd);
-            [$originalWidth, $originalHeight] = explode('x', trim($resolutionOutput));
-            $originalHeight = (int) $originalHeight;
+            // Step 1: Get original video resolution and color format
+            $ffprobeCmd = "$ffprobePath -v error -select_streams v:0 -show_entries stream=width,height,pix_fmt -of csv=p=0:s=x \"$videoPath\"";
+            $videoInfo = shell_exec($ffprobeCmd);
+            $parts = explode('x', trim($videoInfo));
+            $originalWidth = (int) $parts[0];
+            $originalHeight = (int) $parts[1];
+            $pixelFormat = isset($parts[2]) ? $parts[2] : 'unknown';
+
+            // Determine if we need to handle 10-bit content
+            $is10Bit = strpos($pixelFormat, '10') !== false;
+
+            Log::info("Video analysis", [
+                'width' => $originalWidth,
+                'height' => $originalHeight,
+                'pixel_format' => $pixelFormat,
+                'is_10bit' => $is10Bit
+            ]);
 
             // Step 2: Define quality profiles (ascending order)
             $profiles = [
@@ -140,6 +155,7 @@ class ProcessVideo implements ShouldQueue
                 if ($profile['height'] > $originalHeight) {
                     continue;
                 }
+
                 $resolutions[] = $profile['label'];
                 $profileDir = $outputDir . '/' . $profile['label'];
                 if (!file_exists($profileDir)) {
@@ -149,9 +165,25 @@ class ProcessVideo implements ShouldQueue
                 $playlistName = "playlist.m3u8";
                 $segmentName = "segment_%03d.m4s";
 
+                // Build video filters for proper color space handling
+                $videoFilters = "scale={$profile['resolution']}";
+
+                // Add color space conversion if needed for 10-bit content
+                if ($is10Bit) {
+                    $videoFilters .= ",format=yuv420p";
+                }
+
+                // Choose appropriate x264 profile and settings
+                $x264Profile = $is10Bit ? "high" : "main";
+
+                // Build the FFmpeg command with proper 10-bit handling
                 $ffmpegCommand = "$ffmpegPath -y -i \"$videoPath\" "
-                    . "-vf \"scale={$profile['resolution']}\" "
-                    . "-c:v libx264 -preset slow -profile:v main -b:v {$profile['bitrate']} "
+                    . "-vf \"$videoFilters\" "
+                    . "-c:v libx264 -preset slow -profile:v $x264Profile "
+                    . "-pix_fmt yuv420p "  // Force 8-bit output
+                    . "-b:v {$profile['bitrate']} "
+                    . "-maxrate " . (intval($profile['bitrate']) * 1.5) . ($profile['bitrate'][strlen($profile['bitrate']) - 1] === 'k' ? 'k' : '') . " "
+                    . "-bufsize " . (intval($profile['bitrate']) * 2) . ($profile['bitrate'][strlen($profile['bitrate']) - 1] === 'k' ? 'k' : '') . " "
                     . "-c:a aac -b:a {$profile['audio_bitrate']} -ac 2 "
                     . "-hls_time 5 "
                     . "-hls_playlist_type vod "
@@ -162,7 +194,13 @@ class ProcessVideo implements ShouldQueue
                     . "-hls_list_size 0 "
                     . "-f hls \"$profileDir/$playlistName\"";
 
-                $process = Process::timeout(3600)->run($ffmpegCommand);
+                Log::info("Processing profile: {$profile['label']}", [
+                    'command' => $ffmpegCommand,
+                    'profile' => $x264Profile,
+                    'is_10bit' => $is10Bit
+                ]);
+
+                $process = Process::timeout(14400)->run($ffmpegCommand);
 
                 if ($process->successful()) {
                     // Inject segment sizes
@@ -187,17 +225,18 @@ class ProcessVideo implements ShouldQueue
                     $bandwidth = (int) ($profile['bitrate']) * (str_contains($profile['bitrate'], 'k') ? 1000 : 1);
                     $masterPlaylist .= "#EXT-X-STREAM-INF:BANDWIDTH=$bandwidth,RESOLUTION={$profile['resolution']}\n";
                     $masterPlaylist .= "{$profile['label']}/$playlistName\n";
+
+                    Log::info("Successfully processed profile: {$profile['label']}");
                 } else {
                     Log::error("FFmpeg failed for {$profile['label']}", [
                         'error' => $process->errorOutput(),
                         'command' => $ffmpegCommand,
                     ]);
-                    echo "Error processing {$profile['label']}: " . $process->errorOutput();
+
                     return [
                         'status' => false,
                         'error' => "FFmpeg failed for {$profile['label']}: " . $process->errorOutput(),
                     ];
-
                 }
             }
 

@@ -16,14 +16,14 @@ class VideoProcessingStatusChanged implements ShouldBroadcast
     public $video;
     public $status;
     public $message;
-    public $progress;
+    public $resolutions;
 
-    public function __construct(Video $video, string $status, string $message = '', int $progress = 0)
+    public function __construct(Video $video, string $status, string $message = '', array $resolutions = [])
     {
         $this->video = $video;
         $this->status = $status;
         $this->message = $message;
-        $this->progress = $progress;
+        $this->resolutions = $resolutions;
     }
 
     /**
@@ -53,7 +53,7 @@ class VideoProcessingStatusChanged implements ShouldBroadcast
             'video_title' => $this->video->title,
             'status' => $this->status,
             'message' => $this->message,
-            'progress' => $this->progress,
+            'resolutions' => $this->resolutions,
             'timestamp' => now()->toISOString(),
         ];
     }
