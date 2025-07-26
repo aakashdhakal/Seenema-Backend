@@ -5,7 +5,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000'], // Remove the /* from the end
+    'allowed_origins' => [
+        'http://localhost:3000',
+        'https://seenema.aakashdhakal.com.np
+'
+    ], // Remove the /* from the end
 
     'allowed_origins_patterns' => [],
 
