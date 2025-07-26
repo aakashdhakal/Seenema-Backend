@@ -166,10 +166,10 @@ class AuthController extends Controller
             $token = $user->createToken('auth_token')->plainTextToken;
 
             // Redirect back to frontend with the token
-            return redirect('http://localhost:3000/home');
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
         } catch (\Throwable $e) {
             \Log::error('Google Login Failed: ' . $e->getMessage());
-            return redirect("http://localhost:3000/login?error=" . urlencode($e->getMessage()));
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?error=' . urlencode($e->getMessage()));
         }
     }
     public function verifyEmail(Request $request, $id, $hash)
