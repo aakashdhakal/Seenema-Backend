@@ -373,6 +373,62 @@ class VideoController extends Controller
         return response()->json(['message' => 'Video deleted successfully'], 200);
     }
 
+    public function getSearchResults(Request $request)
+    {
+        $query = $request->input('q');
+        $page = $request->input('page', 1);
+        $limit = $request->input('limit', 20);
+
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        // Search and paginate
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->where(function ($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%")
+                    ->orWhere('description', 'like', "%{$query}%")
+                    ->orWhereHas('tags', function ($tagQuery) use ($query) {
+                        $tagQuery->where('name', 'like', "%{$query}%");
+                    })
+                    ->orWhereHas('genres', function ($genreQuery) use ($query) {
+                        $genreQuery->where('name', 'like', "%{$query}%");
+                    })
+                    ->orWhereHas('people', function ($peopleQuery) use ($query) {
+                        $peopleQuery->where('name', 'like', "%{$query}%");
+                    });
+            })
+            ->orderByRaw("
+            CASE 
+                WHEN title LIKE '%{$query}%' THEN 1
+                WHEN description LIKE '%{$query}%' THEN 2
+                ELSE 3
+            END, created_at DESC
+        ")
+            ->skip(($page - 1) * $limit)
+            ->take($limit)
+            ->get()
+            ->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'name' => $video->title,
+                    'poster_path' => $video->thumbnail_path,
+                    'backdrop_path' => $video->backdrop_path,
+                    'vote_average' => $video->rating ?? 0,
+                    'release_date' => $video->release_year ? $video->release_year . '-01-01' : null,
+                    'type' => 'video',
+                    'overview' => $video->description,
+                    'genres' => $video->genres->pluck('name')->toArray(),
+                    'slug' => $video->slug,
+                    'duration' => $video->duration,
+                ];
+            });
+
+        return response()->json($videos);
+    }
+
 
 
 }

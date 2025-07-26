@@ -112,3 +112,6 @@ Route::get('/watchlist', [WatchListController::class, 'getWatchList']);
 Route::post('/favourites/add', [FavouritesController::class, 'addToFavourites']);
 Route::post('/favourites/remove', [FavouritesController::class, 'removeFromFavourites']);
 Route::get('/favourites', [FavouritesController::class, 'getFavourites']);
+
+//Search Route
+Route::get('/search', [VideoController::class, 'getSearchResults']);
