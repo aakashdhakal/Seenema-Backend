@@ -62,6 +62,8 @@ COPY --from=builder /var/www .
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
     && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
+RUN php artisan storage:link
+
 # Expose port 5003 for Nginx
 EXPOSE 5003
 
