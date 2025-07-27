@@ -105,9 +105,10 @@ Route::post('/addTagsToVideo', [TagController::class, 'addTagsToVideo']);
 //Users Route
 Route::get('/getUsers', [UserController::class, 'getAllUsers']);
 
-Route::post('/watchlist/add', [WatchListController::class, 'addToWatchList']);
-Route::post('/watchlist/remove', [WatchListController::class, 'removeFromWatchList']);
-Route::get('/watchlist', [WatchListController::class, 'getWatchList']);
+Route::post('/addToWatchList', [WatchListController::class, 'addToWatchList']);
+Route::post('/removeFromWatchList', [WatchListController::class, 'removeFromWatchList']);
+Route::get('/getWatchlist', [WatchListController::class, 'getWatchList']);
+Route::get('/checkIfVideoInWatchList', [WatchListController::class, 'checkIfVideoInWatchList']);
 
 Route::post('/favourites/add', [FavouritesController::class, 'addToFavourites']);
 Route::post('/favourites/remove', [FavouritesController::class, 'removeFromFavourites']);
