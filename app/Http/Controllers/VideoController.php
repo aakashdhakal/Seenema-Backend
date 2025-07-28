@@ -79,50 +79,57 @@ class VideoController extends Controller
      */
     public function uploadChunk(Request $request)
     {
-        $request->validate([
-            'video_id' => 'required|string|exists:videos,id',
-            'chunk' => 'required|file',
-        ]);
+        try {
+            $request->validate([
+                'video_id' => 'required|string|exists:videos,id',
+                'chunk' => 'required|file',
+            ]);
 
-        $video = Video::findOrFail($request->video_id);
-        $chunk = $request->file('chunk');
-        $videoDirectory = "videos/{$video->id}";
-        $finalPath = "{$videoDirectory}/{$video->id}";
+            $video = Video::findOrFail($request->video_id);
+            $chunk = $request->file('chunk');
+            $videoDirectory = "videos/{$video->id}";
+            $finalPath = "{$videoDirectory}/{$video->id}";
 
-        // --- MEMORY-SAFE CHUNK APPENDING ---
-        // Get the path to the temporary uploaded chunk file
-        $chunkPath = $chunk->getRealPath();
+            // --- MEMORY-SAFE CHUNK APPENDING ---
+            // Get the path to the temporary uploaded chunk file
+            $chunkPath = $chunk->getRealPath();
 
-        // Get the full destination path on the 'public' disk
-        $destinationPath = Storage::disk('public')->path($finalPath);
+            // Get the full destination path on the 'public' disk
+            $destinationPath = Storage::disk('public')->path($finalPath);
 
-        // Ensure the destination directory exists
-        Storage::disk('public')->makeDirectory($videoDirectory);
+            // Ensure the destination directory exists
+            Storage::disk('public')->makeDirectory($videoDirectory);
 
-        // Open the destination file in append mode and the chunk in read mode
-        $destinationStream = fopen($destinationPath, 'a');
-        $sourceStream = fopen($chunkPath, 'r');
+            // Open the destination file in append mode and the chunk in read mode
+            $destinationStream = fopen($destinationPath, 'a');
+            $sourceStream = fopen($chunkPath, 'r');
 
-        // Copy the contents of the chunk stream to the destination stream
-        stream_copy_to_stream($sourceStream, $destinationStream);
+            // Copy the contents of the chunk stream to the destination stream
+            stream_copy_to_stream($sourceStream, $destinationStream);
 
-        // Close the file handles
-        fclose($sourceStream);
-        fclose($destinationStream);
-        // --- END OF MEMORY-SAFE CODE ---
+            // Close the file handles
+            fclose($sourceStream);
+            fclose($destinationStream);
+            // --- END OF MEMORY-SAFE CODE ---
 
-        if ($request->boolean('is_last')) {
-            $fullPath = Storage::disk('public')->path($finalPath);
-            $outputDir = Storage::disk('public')->path($videoDirectory);
+            if ($request->boolean('is_last')) {
+                $fullPath = Storage::disk('public')->path($finalPath);
+                $outputDir = Storage::disk('public')->path($videoDirectory);
 
-            $video->status = Video::STATUS_PROCESSING;
-            $video->duration = $this->getVideoDuration($fullPath);
-            $video->save();
-            // 1. Notify: Processing has started
-            broadcast(new VideoProcessingStatusChanged($video, 'processing', 'Processing started...'))->toOthers();
-            ProcessVideo::dispatch($video->id, $fullPath, $outputDir);
+                $video->status = Video::STATUS_PROCESSING;
+                $video->duration = $this->getVideoDuration($fullPath);
+                $video->save();
+                // 1. Notify: Processing has started
+                broadcast(new VideoProcessingStatusChanged($video, 'processing', 'Processing started...'))->toOthers();
+                ProcessVideo::dispatch($video->id, $fullPath, $outputDir);
 
-            return response()->json(['message' => 'Upload complete, processing started.']);
+                return response()->json(['message' => 'Upload complete, processing started.']);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to upload chunk: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
 
         return response()->json(['message' => 'Chunk uploaded successfully.']);
