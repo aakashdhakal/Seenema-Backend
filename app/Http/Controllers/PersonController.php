@@ -34,8 +34,10 @@ class PersonController extends Controller
 
             $person->save();
         } catch (\Exception $e) {
-            // 1. Catch any exception and return a JSON response with the error message.
-            return response()->json(['error' => 'Failed to create person: ' . $e->getMessage()], 500);
+            return response()->json([
+                'error' => 'Failed to create person: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
 
         return response()->json($person, 201);
