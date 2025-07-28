@@ -17,21 +17,26 @@ class PersonController extends Controller
 
     public function createPerson(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:people,name',
-            'biography' => 'nullable|string',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
-        ]);
-        $appUrl = env('APP_URL');
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255|unique:people,name',
+                'biography' => 'nullable|string',
+                'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:4096',
+            ]);
+            $appUrl = env('APP_URL');
 
-        $person = new Person($request->only('name', 'biography'));
+            $person = new Person($request->only('name', 'biography'));
 
-        if ($request->hasFile('profile_picture')) {
-            $path = $request->file('profile_picture')->storeAs('images/person', Str::slug($request->name) . '.' . $request->file('profile_picture')->getClientOriginalExtension(), 'public');
-            $person->profile_picture = "$appUrl/storage/$path";
+            if ($request->hasFile('profile_picture')) {
+                $path = $request->file('profile_picture')->storeAs('images/person', Str::slug($request->name) . '.' . $request->file('profile_picture')->getClientOriginalExtension(), 'public');
+                $person->profile_picture = "$appUrl/storage/$path";
+            }
+
+            $person->save();
+        } catch (\Exception $e) {
+            // 1. Catch any exception and return a JSON response with the error message.
+            return response()->json(['error' => 'Failed to create person: ' . $e->getMessage()], 500);
         }
-
-        $person->save();
 
         return response()->json($person, 201);
     }
