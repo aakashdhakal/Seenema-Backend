@@ -63,6 +63,7 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
     && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
 
 RUN echo "upload_max_filesize=700M\npost_max_size=700M" > /usr/local/etc/php/conf.d/uploads.ini
+RUN echo "max_execution_time=10800" > /usr/local/etc/php/conf.d/execution.ini
 
 RUN php artisan storage:link
 
