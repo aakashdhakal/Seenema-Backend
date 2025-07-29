@@ -17,5 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->reportable(function (Throwable $e) {
+            // Handle exceptions globally
+            // You can log them or perform other actions here\
+            // For example, you can log the exception:
+            Log::error($e->getMessage(), ['exception' => $e]);
+        });
         //
     })->create();
