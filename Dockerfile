@@ -66,6 +66,9 @@ RUN echo "upload_max_filesize=700M\npost_max_size=700M" > /usr/local/etc/php/con
 RUN echo "max_execution_time=10800" > /usr/local/etc/php/conf.d/execution.ini
 
 RUN php artisan storage:link
+RUN php artisan optimize
+
+
 
 # Expose port 5003 for Nginx
 EXPOSE 5003
