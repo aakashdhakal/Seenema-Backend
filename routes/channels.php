@@ -10,3 +10,7 @@ Broadcast::channel('user.{userId}', function ($user, $userId) {
 Broadcast::channel('admin.notifications', function ($user) {
     return $user->role == "admin"; // Adjust based on your admin check
 });
+
+Broadcast::channel('test-channel', function ($user) {
+    return true; // Allow all users to listen for testing purposes
+});
