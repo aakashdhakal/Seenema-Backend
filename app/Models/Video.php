@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\WatchList;
 
 class Video extends Model
 {
@@ -29,6 +30,7 @@ class Video extends Model
     protected $casts = [
         'resolutions' => 'array',
     ];
+    protected $appends = ['exists_in_watchlist'];
 
     const STATUS_PROCESSING = 'processing';
     const STATUS_READY = 'ready';
@@ -54,6 +56,16 @@ class Video extends Model
     public function genres()
     {
         return $this->belongsToMany(Genre::class, 'video_genres');
+    }
+    public function getExistsInWatchlistAttribute()
+    {
+        // Use the currently authenticated user
+        $userId = auth()->id();
+        if (!$userId)
+            return false;
+        return WatchList::where('user_id', $userId)
+            ->where('video_id', $this->id)
+            ->exists();
     }
 
 }
