@@ -18,11 +18,10 @@ class WatchListController extends Controller
         return response()->json(['message' => 'Added to watchlist', 'success' => true]);
     }
 
-    public function removeFromWatchList(Request $request)
+    public function removeFromWatchList($id)
     {
-        $request->validate(['video_id' => 'required|exists:videos,id']);
         WatchList::where('user_id', auth()->id())
-            ->where('video_id', $request->video_id)
+            ->where('video_id', $id)
             ->delete();
         return response()->json(['message' => 'Removed from watchlist', 'success' => true]);
     }
@@ -33,11 +32,10 @@ class WatchListController extends Controller
         return response()->json($videos);
     }
 
-    public function checkIfVideoInWatchList(Request $request)
+    public function checkIfVideoInWatchList($id)
     {
-        $request->validate(['video_id' => 'required|exists:videos,id']);
         $exists = WatchList::where('user_id', auth()->id())
-            ->where('video_id', $request->video_id)
+            ->where('video_id', $id)
             ->exists();
         return response()->json(['exists' => $exists]);
     }

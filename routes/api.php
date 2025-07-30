@@ -12,7 +12,6 @@ use App\Http\Controllers\GenreController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\WatchListController;
 use App\Http\Controllers\FavouritesController;
-use Illuminate\Http\Request;
 
 
 Route::get('/ping', function () {
@@ -25,94 +24,99 @@ Route::get('/health', function () {
     return response()->json(['status' => 'OK'], 200);
 });
 
-
 // Authentication routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/logout', [AuthController::class, 'logout']);
-Route::post('/refresh', [AuthController::class, 'refresh']);
-Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware('auth:sanctum');
-
-
-//email verification routes
-Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['signed'])->name('verification.verify');
-
-Route::post('/email/verification-notification', [AuthController::class, 'sendVerificationEmail'])->middleware(['throttle:6,1'])->name('verification.send');
-
-
-// oauth routes
-Route::get('/auth/google/redirect', function () {
-    return Socialite::driver('google')->redirect();
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/refresh', [AuthController::class, 'refresh']);
+    Route::get('/user', [AuthController::class, 'getAuthenticatedUser'])->middleware('auth:sanctum');
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['signed'])->name('verification.verify');
+    Route::post('/email/notify', [AuthController::class, 'sendVerificationEmail'])->middleware(['throttle:6,1'])->name('verification.send');
+    Route::get('/google/redirect', function () {
+        return Socialite::driver('google')->redirect();
+    });
+    Route::get('/callback', [AuthController::class, 'handleGoogleCallback']);
 });
 
-Route::get('/auth/callback', [AuthController::class, 'handleGoogleCallback']);
 
-// video routes
-Route::post('/createVideoEntry', [VideoController::class, 'createVideoEntry']);
-Route::post('/uploadVideoChunk', [VideoController::class, 'uploadChunk']);
+// Video routes
+Route::prefix('video')->group(function () {
+    Route::post('/create', [VideoController::class, 'createVideoEntry']);
+    Route::post('/chunk/upload', [VideoController::class, 'uploadChunk']);
+    Route::get('/status/{videoId}', [VideoController::class, 'getVideoStatus']);
+    Route::delete('/{videoId}', [VideoController::class, 'deleteVideo']);
+    Route::get('/featured', [VideoController::class, 'getFeaturedVideo']);
+    Route::get('/trending', [VideoController::class, 'getTrendingVideos']);
+    Route::get('/popular', [VideoController::class, 'getPopularVideos']);
+    Route::get('/new-release', [VideoController::class, 'getNewReleases']);
+    Route::get('/category/{category}', [VideoController::class, 'getVideoByCategory']);
+    Route::get('/continue-watching', [VideoController::class, 'getContinueWatching']);
+    Route::get('/recommendations', [VideoController::class, 'getRecommendations']);
+    Route::get('/all', [VideoController::class, 'getAllVideos']);
+    Route::get('/{slugOrId}', [VideoController::class, 'getVideoBySlugOrId']);
+});
 
-Route::get('/getVideoBySlug/{slug}', [VideoController::class, 'getVideoBySlug']);
-Route::get('/getVideoById/{id}', [VideoController::class, 'getVideoById']);
-Route::get('/getVideoStatus/{videoId}', [VideoController::class, 'getVideoStatus']);
-Route::delete('/deleteVideo/{videoId}', [VideoController::class, 'deleteVideo']);
-
-// Video display for users routes
-Route::get('/getFeaturedVideo', [VideoController::class, 'getFeaturedVideo']);
-Route::get('/getTrendingVideos', [VideoController::class, 'getTrendingVideos']);
-Route::get('/getPopularVideos', [VideoController::class, 'getPopularVideos']);
-Route::get('/getNewReleases', [VideoController::class, 'getNewReleases']);
-Route::get('/getVideosByCategory/{category}', [VideoController::class, 'getVideoByCategory']);
-Route::get('/getContinueWatching', [VideoController::class, 'getContinueWatching']);
-Route::get('/getVideoById/{videoId}', [VideoController::class, 'getVideoById']);
-Route::post('/submitRating', [VideoController::class, 'submitRating']);
-
-//segment routes
-Route::get('/video/', [SegmentController::class, 'getVideoSegments']);
-Route::get('/init/{id}/{resolution}', [SegmentController::class, 'getInit']);
-Route::get('/segment/{videoId}/{resolution}/{segment}', [SegmentController::class, 'getSegment']);
-Route::get('/manifest/{videoId}', [SegmentController::class, 'getManifest']);
-Route::get('/manifest/{videoId}/{resolution}', [SegmentController::class, 'getManifestByResolution']);
-Route::get('/getSegmentSizes/{videoId}/{segment}', [SegmentController::class, 'getSegmentSizes']);
-Route::get('/getIntroVideo/{resolution}', [SegmentController::class, 'getIntroVideo']);
-Route::get('/getIntroInit/{resolution}', [SegmentController::class, 'getIntroInit']);
-Route::get('/getIntroManifest/{resolution}', [SegmentController::class, 'getIntroManifest']);
+//Stream Segment Routes
+Route::prefix('stream')->group(function () {
+    Route::get('/segment/all', [SegmentController::class, 'getVideoSegments']);
+    Route::get('/init/{id}/{resolution}', [SegmentController::class, 'getInit']);
+    Route::get('/segment/{videoId}/{resolution}/{segment}', [SegmentController::class, 'getSegment']);
+    Route::get('/manifest/{videoId}', [SegmentController::class, 'getManifest']);
+    Route::get('/manifest/{videoId}/{resolution}', [SegmentController::class, 'getManifestByResolution']);
+    Route::get('/segment-size/{videoId}/{segment}', [SegmentController::class, 'getSegmentSizes']);
+    Route::get('/intro/{resolution}', [SegmentController::class, 'getIntroVideo']);
+    Route::get('/intro/init/{resolution}', [SegmentController::class, 'getIntroInit']);
+    Route::get('/intro/manifest/{resolution}', [SegmentController::class, 'getIntroManifest']);
+});
 
 
-// Video Recommendation Routes
-Route::get('/getRecommendations', [VideoController::class, 'getRecommendations']);
-Route::get('/getAllVideos', [VideoController::class, 'getAllVideos']);
-
-// Watch History Routes (Protected)
-Route::get('/history', [WatchHistoryController::class, 'getHistory']);
-Route::get('/history/resume/{videoId}', [WatchHistoryController::class, 'getResumePoint']);
-Route::post('/updateWatchHistory', [WatchHistoryController::class, 'updateProgress']);
-Route::delete('/history/remove/{videoId}', [WatchHistoryController::class, 'removeHistoryItem']);
-Route::delete('/history/clear', [WatchHistoryController::class, 'clearHistory']);
+// Watch History Routes 
+Route::prefix('history')->group(function () {
+    Route::get('/', [WatchHistoryController::class, 'getHistory']);
+    Route::get('/resume/{videoId}', [WatchHistoryController::class, 'getResumePoint']);
+    Route::post('/update', [WatchHistoryController::class, 'updateProgress']);
+    Route::delete('/{videoId}', [WatchHistoryController::class, 'removeHistoryItem']);
+    Route::delete('/clear', [WatchHistoryController::class, 'clearHistory']);
+    Route::delete('/continue-watching/{videoId}', [WatchHistoryController::class, 'removeFormContinueWatching']);
+});
 
 //Person credits route
-Route::get('/getPeople', [PersonController::class, 'getPeople']);
-Route::post('/addPerson', [PersonController::class, 'createPerson']);
-Route::post('/addCreditsToVideo', [PersonController::class, 'addPersonToVideo']);
+Route::prefix('people')->group(function () {
+    Route::get('/get', [PersonController::class, 'getPeople']);
+    Route::post('/create', [PersonController::class, 'createPerson']);
+    Route::post('/add-credit', [PersonController::class, 'addPersonToVideo']);
+});
 
 //Genre Routes
-Route::get('/getGenres', [GenreController::class, 'getAllGenres']);
-Route::post('/addGenreToVideo', [GenreController::class, 'addGenreToVideo']);
+Route::prefix('genre')->group(function () {
+    Route::get('/get', [GenreController::class, 'getAllGenres']);
+    Route::post('/add', [GenreController::class, 'addGenreToVideo']);
+});
 
 // Tag Routes
-Route::post('/addTagsToVideo', [TagController::class, 'addTagsToVideo']);
-// Route::get('/getTags', [TagController::class, 'getAllTags']);
+Route::prefix('tags')->group(function () {
+    Route::post('/add', [TagController::class, 'addTagsToVideo']);
+});
 
 //Users Route
-Route::get('/getUsers', [UserController::class, 'getAllUsers']);
+Route::prefix('users')->group(function () {
+    Route::get('/', [UserController::class, 'getAllUsers']);
+});
 
-Route::post('/addToWatchList', [WatchListController::class, 'addToWatchList']);
-Route::post('/removeFromWatchList', [WatchListController::class, 'removeFromWatchList']);
-Route::get('/getWatchlist', [WatchListController::class, 'getWatchList']);
-Route::get('/checkIfVideoInWatchList', [WatchListController::class, 'checkIfVideoInWatchList']);
+Route::prefix('watchlist')->group(function () {
+    Route::post('/add', [WatchListController::class, 'addToWatchList']);
+    Route::delete('/{id}', [WatchListController::class, 'removeFromWatchList']);
+    Route::get('/', [WatchListController::class, 'getWatchList']);
+    Route::get('/check/{id}', [WatchListController::class, 'checkIfVideoInWatchList']);
+});
 
-Route::post('/favourites/add', [FavouritesController::class, 'addToFavourites']);
-Route::post('/favourites/remove', [FavouritesController::class, 'removeFromFavourites']);
-Route::get('/favourites', [FavouritesController::class, 'getFavourites']);
-
+Route::prefix('favourites')->group(
+    function () {
+        Route::post('/add', [FavouritesController::class, 'addToFavourites']);
+        Route::delete('/{id}', [FavouritesController::class, 'removeFromFavourites']);
+        Route::get('/', [FavouritesController::class, 'getFavourites']);
+    }
+);
 //Search Route
 Route::get('/search', [VideoController::class, 'getSearchResults']);

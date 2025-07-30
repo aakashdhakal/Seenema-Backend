@@ -11,10 +11,25 @@ use App\Models\WatchHistory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Events\VideoProcessingStatusChanged;
+use App\Models\User;
+use App\Notifications\SimpleNotification;
 
 
 class VideoController extends Controller
 {
+    public function sendNotificationToUser($title, $body)
+    {
+        // Find the user you want to notify (e.g., the video owner)
+        $user = User::find(Auth::id());
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Send the notification
+        $user->notify(new SimpleNotification($title, $body));
+
+        return response()->json(['message' => 'Notification sent successfully']);
+    }
 
     public function getVideoDuration($videoPath)
     {
@@ -153,6 +168,14 @@ class VideoController extends Controller
         return response()->json($video, 200);
     }
 
+    public function getVideoBySlugOrId($slugOrId)
+    {
+        if (is_numeric($slugOrId)) {
+            return $this->getVideoById($slugOrId);
+        }
+        return $this->getVideoBySlug($slugOrId);
+    }
+
     public function getVideoStatus($videoId)
     {
         $video = Video::find($videoId);
@@ -248,6 +271,7 @@ class VideoController extends Controller
             $recommendations = $recommendations->merge($contentBased);
         }
 
+        $this->sendNotificationToUser('Recommendations', 'We have new recommendations for you!');
         return response()->json($recommendations);
     }
 
@@ -355,6 +379,9 @@ class VideoController extends Controller
             ->orderBy('updated_at', 'desc')
             ->take(10)
             ->get();
+
+
+
 
         return response()->json($watchHistory, 200);
     }

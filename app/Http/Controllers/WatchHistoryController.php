@@ -86,7 +86,7 @@ class WatchHistoryController extends Controller
             ->where('video_id', $videoId)
             ->delete();
 
-        return response()->json(['message' => 'Video removed from watch history.']);
+        return response()->json(['message' => 'Video removed from watch history.'], 200);
     }
 
     public function clearHistory()
@@ -95,5 +95,22 @@ class WatchHistoryController extends Controller
         $user->watchHistory()->delete();
 
         return response()->json(['message' => 'Watch history cleared successfully.']);
+    }
+
+    public function removeFormContinueWatching($videoId)
+    {
+        $user = Auth::user();
+
+        // Update the continue_watching flag to false
+        $history = WatchHistory::where('user_id', $user->id)
+            ->where('video_id', $videoId)
+            ->first();
+
+        if ($history) {
+            $history->continue_watching = false;
+            $history->save();
+        }
+
+        return response()->json(['message' => 'Video removed from continue watching list.'], 200);
     }
 }

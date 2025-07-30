@@ -100,7 +100,12 @@ class AuthController extends Controller
 
         // Return user information as JSON response
         return response()->json([
-            'user' => $user,
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $user->profile_picture,
+            'role' => $user->role, // Include role in the response
+            'is_email_verified' => $user->hasVerifiedEmail(),
         ], 200);
     }
 

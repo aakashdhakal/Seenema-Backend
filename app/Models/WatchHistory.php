@@ -28,6 +28,8 @@ class WatchHistory extends Model
         'video_id',
         'watched_duration',
         'finished_at',
+        'continue_watching', // add this
+
     ];
 
     /**
@@ -38,6 +40,8 @@ class WatchHistory extends Model
     protected $casts = [
         'watched_duration' => 'float',
         'finished_at' => 'datetime',
+        'continue_watching' => 'boolean', // add this
+
     ];
 
     /**

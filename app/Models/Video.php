@@ -68,4 +68,6 @@ class Video extends Model
             ->exists();
     }
 
+
+
 }

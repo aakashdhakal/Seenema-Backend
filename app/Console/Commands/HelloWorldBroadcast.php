@@ -3,7 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Events\HelloWorldEvent;
+use App\Models\User;
+use App\Notifications\SimpleNotification;
 
 class HelloWorldBroadcast extends Command
 {
@@ -12,17 +13,33 @@ class HelloWorldBroadcast extends Command
 
     public function handle()
     {
-        $times = (int) $this->option('times');
-        $interval = (int) $this->option('interval');
+        // Default: 5 times, 10 seconds interval
+        $times = $this->option('times') !== null ? (int) $this->option('times') : 5;
+        $interval = $this->option('interval') !== null ? (int) $this->option('interval') : 10;
+
+        if ($times <= 0)
+            $times = 5;
+        if ($interval <= 0)
+            $interval = 10;
+
         $count = 0;
 
-        $this->info("Broadcasting 'hello world' every {$interval}s" . ($times ? " for $times times" : " (infinite)") . "...");
+        $this->info("Broadcasting 'hello world' every {$interval}s for $times times...");
 
-        while ($times === 0 || $count < $times) {
-            broadcast(new HelloWorldEvent("hello world #" . ($count + 1)));
-            $this->info("Broadcasted hello world #" . ($count + 1));
+        while ($count < $times) {
+            $user = User::find(23);
+            if (!$user) {
+                $this->error("User with ID 23 not found.");
+                return;
+            }
+            $user->notify(new SimpleNotification(
+                'Hello World',
+                'This is a test message from the command line.'
+            ));
             $count++;
-            sleep($interval);
+            if ($count < $times) {
+                sleep($interval);
+            }
         }
 
         $this->info("Done broadcasting.");
