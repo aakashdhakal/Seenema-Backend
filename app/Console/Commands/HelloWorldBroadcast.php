@@ -14,8 +14,8 @@ class HelloWorldBroadcast extends Command
     public function handle()
     {
         // Default: 5 times, 10 seconds interval
-        $times = $this->option('times') !== null ? (int) $this->option('times') : 5;
-        $interval = $this->option('interval') !== null ? (int) $this->option('interval') : 10;
+        $times = $this->option('times') !== null ? (int) $this->option('times') : 30;
+        $interval = $this->option('interval') !== null ? (int) $this->option('interval') : 5;
 
         if ($times <= 0)
             $times = 5;
@@ -34,7 +34,7 @@ class HelloWorldBroadcast extends Command
             }
             $user->notify(new SimpleNotification(
                 'Hello World',
-                'This is a test message from the command line.'
+                'This is a test message from the command line. Your account has been suspended'
             ));
             $count++;
             if ($count < $times) {

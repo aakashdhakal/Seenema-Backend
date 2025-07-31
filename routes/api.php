@@ -12,6 +12,7 @@ use App\Http\Controllers\GenreController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\WatchListController;
 use App\Http\Controllers\FavouritesController;
+use App\Http\Controllers\NotificationController;
 
 
 Route::get('/ping', function () {
@@ -120,3 +121,13 @@ Route::prefix('favourites')->group(
 );
 //Search Route
 Route::get('/search', [VideoController::class, 'getSearchResults']);
+
+//Notifications Route
+Route::prefix('notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'getNotifications']);
+    Route::post('/mark-as-read', [NotificationController::class, 'markAsRead']);
+    Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/delete/{id}', [NotificationController::class, 'deleteNotification']);
+    Route::post('/delete-all', [NotificationController::class, 'deleteAllNotifications']);
+    Route::post('/send', [NotificationController::class, 'sendNotification']);
+});
