@@ -34,8 +34,6 @@ class VideoProcessingStatusChanged implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            // Channel for all admins
-            new PrivateChannel('admin.notifications'),
             // Channel for the specific user who owns the video
             new PrivateChannel('user.' . $this->video->user_id),
         ];

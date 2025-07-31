@@ -11,6 +11,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use App\Events\VideoProcessingStatusChanged;
+use App\Notifications\SimpleNotification;
+use App\Models\User;
 use Log;
 
 class ProcessVideo implements ShouldQueue
@@ -53,6 +55,9 @@ class ProcessVideo implements ShouldQueue
                     'Your video is ready!',
                     ($splitResult['resolutions']) // Pass count of resolutions to event
                 ))->toOthers();
+                User::where('role', 'admin')->get()->each(function ($admin) use ($video) {
+                    $admin->notify(new SimpleNotification('Video Ready', "A video titled '{$video->title}' has been processed successfully."));
+                });
 
                 Log::info("Video processing completed for video ID: {$this->videoId}");
 
@@ -61,6 +66,14 @@ class ProcessVideo implements ShouldQueue
                 $video->save();
 
                 // 3. Notify: Processing failed
+                User::where('role', 'admin')->get()->each(function ($admin) use ($video, $splitResult) {
+                    $admin->notify(
+                        new SimpleNotification(
+                            'Video Processing Failed',
+                            "Video processing failed for '{$video->title}'. Error: {$splitResult['error']}"
+                        )
+                    );
+                });
                 broadcast(new VideoProcessingStatusChanged($video, 'failed', 'Processing failed.'))->toOthers();
                 Log::error("Video processing failed for video ID: {$this->videoId}", [
                     'error' => $splitResult['error']

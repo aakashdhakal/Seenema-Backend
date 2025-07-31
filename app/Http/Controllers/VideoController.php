@@ -17,18 +17,46 @@ use App\Notifications\SimpleNotification;
 
 class VideoController extends Controller
 {
-    public function sendNotificationToUser($title, $body)
+    public function sendNotificationToUser($title, $body, $user = null)
     {
-        // Find the user you want to notify (e.g., the video owner)
-        $user = User::find(Auth::id());
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
+        // 1️⃣ If null → send to the authenticated user
+        if ($user === null) {
+            $authUser = Auth::user();
+            if ($authUser) {
+                $authUser->notify(new SimpleNotification($title, $body));
+            }
+            return;
         }
 
-        // Send the notification
-        $user->notify(new SimpleNotification($title, $body));
+        // 2️⃣ If string "admin" → send to all admins
+        if ($user === 'admin') {
+            User::where('role', 'admin')
+                ->get()
+                ->each(fn($admin) => $admin->notify(new SimpleNotification($title, $body)));
+            return;
+        }
 
-        return response()->json(['message' => 'Notification sent successfully']);
+        // 3️⃣ If string "user" → send to all non-admin users
+        if ($user === 'user') {
+            User::where('role', '!=', 'admin')
+                ->get()
+                ->each(fn($u) => $u->notify(new SimpleNotification($title, $body)));
+            return;
+        }
+
+        // 4️⃣ If array → treat as array of IDs
+        if (is_array($user)) {
+            User::whereIn('id', $user)
+                ->get()
+                ->each(fn($u) => $u->notify(new SimpleNotification($title, $body)));
+            return;
+        }
+
+        // 5️⃣ If a single User instance
+        if ($user instanceof User) {
+            $user->notify(new SimpleNotification($title, $body));
+            return;
+        }
     }
 
     public function getVideoDuration($videoPath)
@@ -86,6 +114,11 @@ class VideoController extends Controller
         $video->language = $validated['language'];
         $video->save();
 
+        $this->sendNotificationToUser(
+            'New Video Upload',
+            "A new video titled '{$video->title}' has been uploaded and is now being processed.",
+            'admin' // Notify all admins
+        );
         return response()->json(['video_id' => $video->id], 201);
     }
 
@@ -134,8 +167,7 @@ class VideoController extends Controller
                 $video->status = Video::STATUS_PROCESSING;
                 $video->duration = $this->getVideoDuration($fullPath);
                 $video->save();
-                // 1. Notify: Processing has started
-                broadcast(new VideoProcessingStatusChanged($video, 'processing', 'Processing started...'))->toOthers();
+                // Dispatch the job to process the video
                 ProcessVideo::dispatch($video->id, $fullPath, $outputDir);
 
                 return response()->json(['message' => 'Upload complete, processing started.']);
@@ -270,8 +302,6 @@ class VideoController extends Controller
 
             $recommendations = $recommendations->merge($contentBased);
         }
-
-        $this->sendNotificationToUser('Recommendations', 'We have new recommendations for you!');
         return response()->json($recommendations);
     }
 
