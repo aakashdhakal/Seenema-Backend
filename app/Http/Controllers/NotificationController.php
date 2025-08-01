@@ -12,23 +12,49 @@ class NotificationController extends Controller
     public function sendNotification(Request $request)
     {
         $request->validate([
-            'user_id' => 'required|array|min:1',
-            'user_id.*' => 'exists:users,id',
-            'message' => 'required|string|max:255',
             'title' => 'required|string|max:100',
+            'message' => 'required|string|max:255',
+            'send_to' => 'required|in:all,specific,role',
+            'user_ids' => 'required_if:send_to,specific|array',
+            'user_ids.*' => 'exists:users,id',
+            'target_role' => 'required_if:send_to,role|in:user,admin',
         ]);
 
-        $userIds = $request->input('user_id');
-        $message = $request->input('message');
         $title = $request->input('title');
+        $message = $request->input('message');
+        $sendTo = $request->input('send_to');
 
-        $users = User::whereIn('id', $userIds)->get();
+        $users = collect();
+
+        switch ($sendTo) {
+            case 'all':
+                $users = User::all();
+                break;
+
+            case 'specific':
+                $userIds = $request->input('user_ids');
+                $users = User::whereIn('id', $userIds)->get();
+                break;
+
+            case 'role':
+                $targetRole = $request->input('target_role');
+                $users = User::where('role', $targetRole)->get();
+                break;
+        }
+
+        if ($users->isEmpty()) {
+            return response()->json(['message' => 'No users found to send notifications to.'], 400);
+        }
 
         foreach ($users as $user) {
             $user->notify(new SimpleNotification($title, $message));
         }
 
-        return response()->json(['message' => 'Notifications sent successfully.']);
+        return response()->json([
+            'message' => 'Notifications sent successfully.',
+            'recipients_count' => $users->count(),
+            'send_to' => $sendTo,
+        ]);
     }
 
     public function getNotifications(Request $request)
@@ -112,9 +138,4 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'All notifications deleted successfully.']);
     }
-
-
-
-
-
 }
