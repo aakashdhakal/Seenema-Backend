@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Verified;
-
+use App\Notifications\SimpleNotification;
 
 class AuthController extends Controller
 {
@@ -70,6 +70,11 @@ class AuthController extends Controller
 
         $user->sendEmailVerificationNotification();
         Auth::login($user, remember: true);
+
+        $user->notify(new SimpleNotification(
+            'Welcome to Seenema',
+            'Experience the world of cinema with us! Enjoy your journey through movies'
+        ));
 
         // Return success response
         return response()->json(['message' => 'User registered successfully'], 201);
@@ -169,6 +174,10 @@ class AuthController extends Controller
 
             // Create a token for the user to be used by the frontend
             $token = $user->createToken('auth_token')->plainTextToken;
+            $user->notify(new SimpleNotification(
+                'Welcome to Seenema',
+                'Experience the world of cinema with us! Enjoy your journey through movies'
+            ));
 
             // Redirect back to frontend with the token
             return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
