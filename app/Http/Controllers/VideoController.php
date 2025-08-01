@@ -13,6 +13,9 @@ use Illuminate\Support\Str;
 use App\Events\VideoProcessingStatusChanged;
 use App\Models\User;
 use App\Notifications\SimpleNotification;
+use App\Models\Genre;
+use App\Models\Tag;
+use App\Models\Person; // Assuming you have a Person model for credits
 
 
 class VideoController extends Controller
@@ -114,11 +117,6 @@ class VideoController extends Controller
         $video->language = $validated['language'];
         $video->save();
 
-        $this->sendNotificationToUser(
-            'New Video Upload',
-            "A new video titled '{$video->title}' has been uploaded and is now being processed.",
-            'admin' // Notify all admins
-        );
         return response()->json(['video_id' => $video->id], 201);
     }
 
@@ -493,6 +491,115 @@ class VideoController extends Controller
         return response()->json($videos);
     }
 
+    public function updateVideoDetails(Request $request, $videoId)
+    {
+        $video = Video::find($videoId);
+        if (!$video) {
+            return response()->json(['message' => 'Video not found'], 404);
+        }
 
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'poster' => 'sometimes|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'backdrop' => 'sometimes|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'releaseYear' => 'sometimes|integer',
+            'contentRating' => 'sometimes|string',
+            'visibility' => 'sometimes|string',
+            'language' => 'sometimes|string',
+            'genres' => 'sometimes|json',
+            'tags' => 'sometimes|json',
+            'credits' => 'sometimes|json',
+
+        ]);
+
+        if (isset($validated['title'])) {
+            $video->title = $validated['title'];
+        }
+        if (isset($validated['description'])) {
+            $video->description = $validated['description'];
+        }
+        if (isset($validated['releaseYear'])) {
+            $video->release_year = $validated['releaseYear'];
+        }
+        if (isset($validated['contentRating'])) {
+            $video->content_rating = $validated['contentRating'];
+        }
+        if (isset($validated['visibility'])) {
+            $video->visibility = $validated['visibility'];
+        }
+        if (isset($validated['language'])) {
+            $video->language = $validated['language'];
+        }
+        if (isset($validated['genres']) && is_string($validated['genres'])) {
+            $validated['genres'] = json_decode($validated['genres'], true);
+            $genreIds = [];
+            // 3. Loop through the genre names to find or create them and collect their IDs.
+            foreach ($validated['genres'] as $genreName) {
+                $genre = Genre::firstOrCreate(
+                    ['name' => trim($genreName)],
+                    ['slug' => Str::slug(trim($genreName))]
+                );
+                $genreIds[] = $genre->id;
+            }
+            // 4. Sync the genres with the video.
+            $video->genres()->sync($genreIds);
+
+        }
+        if (isset($validated['tags']) && is_string($validated['tags'])) {
+            $validated['tags'] = json_decode($validated['tags'], true);
+            $tagIds = [];
+            // 3. Loop through the tag names to find or create them and collect their IDs.
+            foreach ($validated['tags'] as $tagName) {
+                $tag = Tag::firstOrCreate(
+                    ['name' => trim($tagName)],
+                    ['slug' => Str::slug(trim($tagName))]
+                );
+                $tagIds[] = $tag->id;
+            }
+            // 4. Sync the tags with the video.
+            $video->tags()->sync($tagIds);
+        }
+        if (isset($validated['credits']) && is_string($validated['credits'])) {
+            $validated['credits'] = json_decode($validated['credits'], true);
+            $peopleToSync = [];
+            // 3. Prepare the data for syncing, including all pivot data.
+            foreach ($validated['credits'] as $personCredit) {
+                $peopleToSync[$personCredit['person_id']] = [
+                    'credited_as' => $personCredit['credited_as']
+                ];
+            }
+
+            // 4. Use syncWithoutDetaching for a safe and efficient update.
+            // This adds the new credits without removing existing ones and prevents errors on duplicates.
+            $video->people()->syncWithoutDetaching($peopleToSync);
+        }
+
+        if ($request->hasFile('poster')) {
+            // Delete old poster if exists
+            if ($video->thumbnail_path) {
+                $oldPosterPath = str_replace(asset('storage') . '/', '', $video->thumbnail_path);
+                Storage::disk('public')->delete($oldPosterPath);
+            }
+            $posterPath = $request->file('poster')->store("images/{$videoId}/poster", 'public');
+            $video->thumbnail_path = asset('storage/' . $posterPath);
+        }
+        if ($request->hasFile('backdrop')) {
+            // Delete old backdrop if exists
+            if ($video->backdrop_path) {
+                $oldBackdropPath = str_replace(asset('storage') . '/', '', $video->backdrop_path);
+                Storage::disk('public')->delete($oldBackdropPath);
+            }
+            $backdropPath = $request->file('backdrop')->store("images/{$videoId}/backdrop", 'public');
+            $video->backdrop_path = asset('storage/' . $backdropPath);
+        }
+
+        $video->save();
+        //add updated data to video 
+        $video = Video::with(['tags', 'genres', 'people'])->find($video->id);
+
+
+        return response()->json($video);
+    }
 
 }

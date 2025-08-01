@@ -41,4 +41,17 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URL'),
     ],
 
+    'ffmpeg' => [
+        'path' => env('FFMPEG_PATH', 'ffmpeg'),
+        'ffprobe_path' => env('FFPROBE_PATH', 'ffprobe'),
+        'profiles' => [
+            ['label' => '144p', 'resolution' => '256x144', 'bitrate' => '150k', 'height' => 144],
+            ['label' => '240p', 'resolution' => '426x240', 'bitrate' => '400k', 'height' => 240],
+            ['label' => '480p', 'resolution' => '854x480', 'bitrate' => '1000k', 'height' => 480],
+            ['label' => '720p', 'resolution' => '1280x720', 'bitrate' => '2500k', 'height' => 720],
+            ['label' => '1080p', 'resolution' => '1920x1080', 'bitrate' => '5000k', 'height' => 1080],
+            ['label' => '2160p', 'resolution' => '3840x2160', 'bitrate' => '10000k', 'height' => 2160],
+        ],
+    ],
+
 ];

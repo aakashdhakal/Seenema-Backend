@@ -194,6 +194,7 @@ class ProcessVideo implements ShouldQueue
                     . "-vf \"$videoFilters\" "
                     . "-c:v libx264 -preset slow -profile:v $x264Profile "
                     . "-pix_fmt yuv420p "  // Force 8-bit output
+                    . "-g 48 -keyint_min 48 "
                     . "-b:v {$profile['bitrate']} "
                     . "-maxrate " . (intval($profile['bitrate']) * 1.5) . ($profile['bitrate'][strlen($profile['bitrate']) - 1] === 'k' ? 'k' : '') . " "
                     . "-bufsize " . (intval($profile['bitrate']) * 2) . ($profile['bitrate'][strlen($profile['bitrate']) - 1] === 'k' ? 'k' : '') . " "

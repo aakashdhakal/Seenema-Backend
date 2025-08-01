@@ -55,6 +55,7 @@ Route::prefix('video')->group(function () {
     Route::get('/continue-watching', [VideoController::class, 'getContinueWatching']);
     Route::get('/recommendations', [VideoController::class, 'getRecommendations']);
     Route::get('/all', [VideoController::class, 'getAllVideos']);
+    Route::post('/update/{videoId}', [VideoController::class, 'updateVideoDetails']);
     Route::get('/{slugOrId}', [VideoController::class, 'getVideoBySlugOrId']);
 });
 
