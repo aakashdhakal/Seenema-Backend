@@ -54,6 +54,7 @@ Route::prefix('video')->group(function () {
     Route::get('/category/{category}', [VideoController::class, 'getVideoByCategory']);
     Route::get('/continue-watching', [VideoController::class, 'getContinueWatching']);
     Route::get('/recommendations', [VideoController::class, 'getRecommendations']);
+    Route::get('/all/paginate', [VideoController::class, 'getAllPaginatedVideos']);
     Route::get('/all', [VideoController::class, 'getAllVideos']);
     Route::post('/update/{videoId}', [VideoController::class, 'updateVideoDetails']);
     Route::get('/{slugOrId}', [VideoController::class, 'getVideoBySlugOrId']);
@@ -81,6 +82,7 @@ Route::prefix('history')->group(function () {
     Route::delete('/{videoId}', [WatchHistoryController::class, 'removeHistoryItem']);
     Route::delete('/clear', [WatchHistoryController::class, 'clearHistory']);
     Route::delete('/continue-watching/{videoId}', [WatchHistoryController::class, 'removeFormContinueWatching']);
+    Route::get('/stats', [WatchHistoryController::class, 'getUserStats']);
 });
 
 //Person credits route
@@ -101,7 +103,10 @@ Route::prefix('tags')->group(function () {
     Route::post('/add', [TagController::class, 'addTagsToVideo']);
 });
 
-//Users Route
+Route::prefix('user')->group(function () {
+    Route::post('/update', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
+});
+
 Route::prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'getAllUsers']);
 });

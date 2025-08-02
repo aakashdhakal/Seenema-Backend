@@ -26,7 +26,16 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'profile_picture',
-        'role', // Added role attribute
+        'role',
+        'gender',         // Added gender
+        'dob',            // Added date of birth
+        'bio',            // Optional: short biography
+        'phone',          // Optional: phone number
+        'address',        // Optional: address
+        'google_id',      // Optional: Google ID for OAuth
+        'google_token',   // Optional: Google token for OAuth
+        'google_refresh_token', // Optional: Google refresh token for OAuth
+        'status',
     ];
 
     /**
@@ -37,6 +46,8 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $hidden = [
         'password',
         'remember_token',
+        'google_token',          // Optional: Google token
+        'google_refresh_token',  // Optional: Google refresh token
     ];
 
     /**
@@ -49,6 +60,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'dob' => 'date', // Cast dob to date
         ];
     }
 

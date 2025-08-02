@@ -6,6 +6,7 @@ use App\Models\Video;
 use App\Models\WatchHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\WatchList;
 
 class WatchHistoryController extends Controller
 {
@@ -112,5 +113,35 @@ class WatchHistoryController extends Controller
         }
 
         return response()->json(['message' => 'Video removed from continue watching list.'], 200);
+    }
+
+    public function getUserStats()
+    {
+        $user = Auth::user();
+
+        // Get total watch time
+        $totalWatchTime = WatchHistory::where('user_id', $user->id)
+            ->sum('watched_duration');
+
+        // Get total videos watched
+        $totalVideosWatched = WatchHistory::where('user_id', $user->id)
+            ->count();
+
+
+
+        // Get number of incomplete videos (not finished)
+        $incompleteVideosCount = WatchHistory::where('user_id', $user->id)
+            ->whereNull('finished_at')
+            ->count();
+
+        $totalSavedVideos = WatchList::where('user_id', $user->id)
+            ->count();
+
+        return response()->json([
+            'total_watch_time' => $totalWatchTime,
+            'total_videos_watched' => $totalVideosWatched,
+            'incomplete_videos_count' => $incompleteVideosCount,
+            'total_saved_videos' => $totalSavedVideos,
+        ]);
     }
 }

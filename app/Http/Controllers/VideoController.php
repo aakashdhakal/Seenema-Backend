@@ -309,6 +309,21 @@ class VideoController extends Controller
         return response()->json($videos);
     }
 
+    public function getAllPaginatedVideos(Request $request)
+    {
+        $page = $request->input('page', 1);
+        $limit = $request->input('limit', 20);
+
+        $videos = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->orderBy('created_at', 'desc')
+            ->skip(($page - 1) * $limit)
+            ->take($limit)
+            ->get();
+
+        return response()->json($videos);
+    }
+
     public function getFeaturedVideo()
     {
         $video = Video::where('status', Video::STATUS_READY)

@@ -10,6 +10,9 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Verified;
 use App\Notifications\SimpleNotification;
+use Illuminate\Support\Facades\Storage;
+//log
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -111,6 +114,14 @@ class AuthController extends Controller
             'profile_picture' => $user->profile_picture,
             'role' => $user->role, // Include role in the response
             'is_email_verified' => $user->hasVerifiedEmail(),
+            'created_at' => $user->created_at->toDateTimeString(),
+            'gender' => $user->gender,
+            'dob' => $user->dob ? $user->dob->toDateString() : null, // Format date if exists
+            'phone' => $user->phone,
+            'bio' => $user->bio,
+            'address' => $user->address,
+            'status' => $user->status,
+
         ], 200);
     }
 
@@ -126,8 +137,8 @@ class AuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->stateless()->user();
             $adminEmail = env('GOOGLE_ADMIN_EMAIL');
-            $appUrl = env('APP_URL', 'http://localhost:8000');
             $user = User::where('email', $googleUser->email)->first();
+            $frontendPath = '/home'; // Path to redirect after login
             if ($user) {
                 // Update existing user
                 $user->update([
@@ -148,10 +159,18 @@ class AuthController extends Controller
                     'password' => bcrypt(Str::random(16)), // temp password to satisfy not-null
                     'role' => $googleUser->email === $adminEmail ? 'admin' : 'user', // Set role based on email
                 ]);
+                $frontendPath = '/newUser'; // Redirect to new user page
             }
 
             //mark email as verified
-            $user->email_verified_at = now(); // Mark email as verified
+            if (!$user->hasVerifiedEmail()) {
+                $user->markEmailAsVerified();
+                $user->notify(new SimpleNotification(
+                    'Welcome to Seenema',
+                    'Experience the world of cinema with us! Enjoy your journey through movies'
+                ));
+
+            }
             $user->save();
 
             // Add or update the profile picture from Google for both new and existing users
@@ -172,15 +191,9 @@ class AuthController extends Controller
 
             Auth::login($user, remember: true);
 
-            // Create a token for the user to be used by the frontend
-            $token = $user->createToken('auth_token')->plainTextToken;
-            $user->notify(new SimpleNotification(
-                'Welcome to Seenema',
-                'Experience the world of cinema with us! Enjoy your journey through movies'
-            ));
-
             // Redirect back to frontend with the token
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . $frontendPath);
+
         } catch (\Throwable $e) {
             \Log::error('Google Login Failed: ' . $e->getMessage());
             return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?error=' . urlencode($e->getMessage()));
