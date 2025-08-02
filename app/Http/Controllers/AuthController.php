@@ -208,7 +208,7 @@ class AuthController extends Controller
         }
         // Check if the email is already verified
         if ($user->hasVerifiedEmail()) {
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/newUser');
         }
 
         // Mark the email as verified and fire the event
