@@ -13,6 +13,7 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\WatchListController;
 use App\Http\Controllers\FavouritesController;
 use App\Http\Controllers\NotificationController;
+use Illuminate\Support\Facades\Storage;
 
 
 Route::get('/ping', function () {
@@ -136,4 +137,14 @@ Route::prefix('notifications')->group(function () {
     Route::post('/delete/{id}', [NotificationController::class, 'deleteNotification']);
     Route::post('/delete-all', [NotificationController::class, 'deleteAllNotifications']);
     Route::post('/send', [NotificationController::class, 'sendNotification']);
+});
+
+//serve subtitles
+Route::get('/storage/subtitles/{file}', function ($file) {
+    $path = Storage::disk('public')->path("subtitles/$file");
+
+    return response()->file($path, [
+        'Content-Type' => 'text/vtt',
+        'Access-Control-Allow-Origin' => '*',
+    ]);
 });
