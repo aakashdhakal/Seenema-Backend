@@ -57,6 +57,8 @@ Route::prefix('video')->group(function () {
     Route::get('/recommendations', [VideoController::class, 'getRecommendations']);
     Route::get('/all/paginate', [VideoController::class, 'getAllPaginatedVideos']);
     Route::get('/all', [VideoController::class, 'getAllVideos']);
+    //serve subtitles
+    Route::get('/subtitles/{videoId}', [VideoController::class, 'getSubtitles']);
     Route::post('/update/{videoId}', [VideoController::class, 'updateVideoDetails']);
     Route::get('/{slugOrId}', [VideoController::class, 'getVideoBySlugOrId']);
 });
@@ -139,12 +141,3 @@ Route::prefix('notifications')->group(function () {
     Route::post('/send', [NotificationController::class, 'sendNotification']);
 });
 
-//serve subtitles
-Route::get('/storage/subtitles/{file}', function ($file) {
-    $path = Storage::disk('public')->path("subtitles/$file");
-
-    return response()->file($path, [
-        'Content-Type' => 'text/vtt',
-        'Access-Control-Allow-Origin' => '*',
-    ]);
-});

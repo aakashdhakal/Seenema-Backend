@@ -617,4 +617,23 @@ class VideoController extends Controller
         return response()->json($video);
     }
 
+    public function getSubtitles($videoId)
+    {
+        $video = Video::find($videoId);
+        if (!$video) {
+            return response()->json(['message' => 'Video not found'], 404);
+        }
+
+        $subtitlesPath = "subtitles/{$videoId}/{$videoId}.vtt";
+        if (!Storage::disk('public')->exists($subtitlesPath)) {
+            return response()->json(['message' => "Subtitles not found in $subtitlesPath"], 404);
+        }
+
+        $filePath = Storage::disk('public')->path($subtitlesPath);
+        return response()->file($filePath, [
+            'Content-Type' => 'text/vtt',
+            'Access-Control-Allow-Origin' => '*',
+        ]);
+    }
+
 }
