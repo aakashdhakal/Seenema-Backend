@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use App\Notifications\SimpleNotification;
 
 class UserController extends Controller
 {
@@ -59,6 +60,97 @@ class UserController extends Controller
         return response()->json([
             'message' => 'Profile updated successfully',
             'user' => $user->fresh()
+        ]);
+    }
+
+    //suspend user account
+    public function changeUserStatus(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'status' => 'required|in:active,suspended'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $targetUser = User::find($request->input('user_id'));
+        $targetUser->status = $request->input('status');
+        $targetUser->save();
+
+        $message = $targetUser->status === 'suspended'
+            ? 'Your account has been suspended by the admin. Please contact support for more information.'
+            : 'Your account has been reactivated by the admin.';
+        $title = $targetUser->status === 'suspended'
+            ? 'Account Suspended'
+            : 'Account Reactivated';
+
+        $targetUser->notify(
+            new SimpleNotification(
+                $$title,
+                $message
+            )
+        );
+
+        return response()->json([
+            'message' => 'User status updated successfully',
+            'user' => $targetUser
+        ]);
+    }
+
+    //change role of the user
+    public function changeUserRole(Request $request)
+    {
+        $user = auth()->user();
+
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'role' => 'required|in:user,admin'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $targetUser = User::find($request->input('user_id'));
+        $targetUser->role = $request->input('role');
+        $targetUser->save();
+
+        $title = $targetUser->role === 'admin'
+            ? 'Role Updated to Admin'
+            : 'Role Updated to User';
+
+        $message = $targetUser->role === 'admin'
+            ? 'You have been granted admin privileges by the admin.'
+            : 'Your admin privileges have been revoked by the admin. Please contact support for more information.';
+
+        $targetUser->notify(
+            new SimpleNotification(
+                $title,
+                $message
+            )
+        );
+
+        return response()->json([
+            'message' => 'User role updated successfully',
+            'user' => $targetUser
         ]);
     }
 }

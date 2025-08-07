@@ -108,6 +108,8 @@ Route::prefix('tags')->group(function () {
 
 Route::prefix('user')->group(function () {
     Route::post('/update', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
+    Route::patch('/status/change', [UserController::class, 'changeUserStatus'])->middleware('auth:sanctum');
+    Route::patch('/role/change', [UserController::class, 'changeUserRole'])->middleware('auth:sanctum');
 });
 
 Route::prefix('users')->group(function () {

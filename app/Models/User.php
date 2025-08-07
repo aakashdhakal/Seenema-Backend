@@ -48,6 +48,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'google_token',          // Optional: Google token
         'google_refresh_token',  // Optional: Google refresh token
+        'google_id',            // Optional: Google ID
     ];
 
     /**
