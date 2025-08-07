@@ -10,12 +10,10 @@ use App\Jobs\ProcessVideo;
 use App\Models\WatchHistory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Events\VideoProcessingStatusChanged;
 use App\Models\User;
 use App\Notifications\SimpleNotification;
 use App\Models\Genre;
 use App\Models\Tag;
-use App\Models\Person; // Assuming you have a Person model for credits
 
 
 class VideoController extends Controller
@@ -92,6 +90,7 @@ class VideoController extends Controller
             'contentRating' => 'nullable|string',
             'visibility' => 'required|string',
             'language' => 'required|string',
+            'subtitle' => 'nullable|file|mimes:vtt|max:2048', // Assuming VTT format for subtitles
         ]);
 
         $appUrl = env('APP_URL');
@@ -100,6 +99,11 @@ class VideoController extends Controller
 
         $posterPath = $request->file('poster')->store("images/{$videoId}/poster", 'public');
         $backdropPath = $request->file('backdrop')->store("images/{$videoId}/backdrop", 'public');
+        if ($request->hasFile('subtitle')) {
+            $subtitlePath = $request->file('subtitle')->storeAs("subtitles/{$videoId}", "{$videoId}.vtt", 'public');
+        } else {
+            $subtitlePath = null; // No subtitle uploaded
+        }
 
         $video = new Video();
         $video->id = $videoId;
