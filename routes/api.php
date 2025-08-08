@@ -39,6 +39,8 @@ Route::prefix('auth')->group(function () {
         return Socialite::driver('google')->redirect();
     });
     Route::get('/callback', [AuthController::class, 'handleGoogleCallback']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });
 
 

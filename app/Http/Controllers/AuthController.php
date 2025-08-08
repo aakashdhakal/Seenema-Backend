@@ -11,8 +11,9 @@ use Illuminate\Support\Str;
 use Illuminate\Auth\Events\Verified;
 use App\Notifications\SimpleNotification;
 use Illuminate\Support\Facades\Storage;
-//log
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -61,7 +62,8 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => Hash::make($request->password),
+            'role' => 'user', // Default role
         ]);
 
         // Handle profile picture upload if it exists
@@ -188,7 +190,6 @@ class AuthController extends Controller
                     $user->save();
                 }
             }
-
             Auth::login($user, remember: true);
 
             // Redirect back to frontend with the token
@@ -233,6 +234,59 @@ class AuthController extends Controller
             'message' => 'Email already verified or user not authenticated.',
             'status' => 400
         ], 400);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        // Validate the request data
+        $request->validate(['email' => 'required|email']);
+
+        $status = Password::sendResetLink(
+            $request->only('email')
+        );
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'message' => __($status),
+                'status' => 200
+            ]);
+        } else {
+            return response()->json([
+                'message' => __($status),
+                'status' => 400
+            ], 400);
+        }
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|min:8|confirmed',
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->setRememberToken(Str::random(60));
+
+                $user->save();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json([
+                'message' => __($status),
+                'status' => 200
+            ]);
+        } else {
+            return response()->json([
+                'message' => __($status),
+                'status' => 400
+            ], 400);
+        }
     }
 
 }

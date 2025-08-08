@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,8 +14,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens;
+    use HasFactory, Notifiable, HasApiTokens, CanResetPassword;
 
     /**
      * The attributes that are mass assignable.
@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_token',   // Optional: Google token for OAuth
         'google_refresh_token', // Optional: Google refresh token for OAuth
         'status',
+        'password_reset_tokens', // Optional: for password reset functionality
     ];
 
     /**
@@ -49,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'google_token',          // Optional: Google token
         'google_refresh_token',  // Optional: Google refresh token
         'google_id',            // Optional: Google ID
+        'password_reset_tokens', // Optional: Password reset tokens
     ];
 
     /**
