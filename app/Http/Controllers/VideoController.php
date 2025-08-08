@@ -683,11 +683,12 @@ class VideoController extends Controller
         // Continue watching (for logged-in user)
         $continueWatching = [];
         if ($userId) {
-            $continueWatching = \App\Models\WatchHistory::with('video')
+            $continueWatching = WatchHistory::with('video')
                 ->where('user_id', $userId)
                 ->whereHas('video', function ($query) {
                     $query->where('status', Video::STATUS_READY);
                 })
+                ->where('continue_watching', '!=', 0)
                 ->whereRaw('watched_duration < (SELECT duration FROM videos WHERE videos.id = watch_histories.video_id) - 20')
                 ->orderBy('updated_at', 'desc')
                 ->take(10)
@@ -697,7 +698,7 @@ class VideoController extends Controller
         // Recommended (for logged-in user)
         $recommended = [];
         if ($userId) {
-            $randomVideoId = \App\Models\WatchHistory::where('user_id', $userId)
+            $randomVideoId = WatchHistory::where('user_id', $userId)
                 ->inRandomOrder()
                 ->value('video_id');
 
