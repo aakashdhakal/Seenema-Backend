@@ -129,7 +129,7 @@
                                 <!-- Content Lines -->
                                 @foreach ($introLines as $line)
                                     <p
-                                        style="margin: 0 0 16px; font-size: 16px; line-height: 1.6; color: #4b5563; text-align: center;">
+                                        style="margin: 0 0 16px; font-size: 16px; line-height: 1.4; color: #4b5563; text-align: center;">
                                         {{ $line }}
                                     </p>
                                 @endforeach
@@ -188,8 +188,8 @@
                                 <div style="margin: 28px 0; border-top: 1px solid #e5e7eb;"></div>
 
                                 <!-- Closing -->
-                                <div style="text-align: center; margin-bottom: 24px;">
-                                    <p style="margin: 0 0 8px; font-size: 16px; line-height: 1.6; color: #6b7280;">
+                                <div style="text-align: center">
+                                    <p style="margin: 0 0 8px; font-size: 16px; line-height: 1.4; color: #6b7280;">
                                         @if (!empty($salutation))
                                             {{ $salutation }}
                                         @else

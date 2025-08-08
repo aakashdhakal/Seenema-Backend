@@ -639,5 +639,101 @@ class VideoController extends Controller
             'Access-Control-Allow-Origin' => '*',
         ]);
     }
+    public function getHomePageData(Request $request)
+    {
+        $userId = Auth::id();
+
+        // Featured video (latest ready)
+        $featured = Video::where('status', Video::STATUS_READY)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        // Trending videos (random 10)
+        $trending = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        // Popular videos (random 10)
+        $popular = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        // New releases (last 30 days)
+        $newReleases = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        // Action videos (genre = 'Action')
+        $action = Video::with('user', 'tags', 'genres', 'people')
+            ->where('status', Video::STATUS_READY)
+            ->whereHas('genres', function ($query) {
+                $query->where('name', 'Action');
+            })
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        // Continue watching (for logged-in user)
+        $continueWatching = [];
+        if ($userId) {
+            $continueWatching = \App\Models\WatchHistory::with('video')
+                ->where('user_id', $userId)
+                ->whereHas('video', function ($query) {
+                    $query->where('status', Video::STATUS_READY);
+                })
+                ->whereRaw('watched_duration < (SELECT duration FROM videos WHERE videos.id = watch_histories.video_id) - 20')
+                ->orderBy('updated_at', 'desc')
+                ->take(10)
+                ->get();
+        }
+
+        // Recommended (for logged-in user)
+        $recommended = [];
+        if ($userId) {
+            $randomVideoId = \App\Models\WatchHistory::where('user_id', $userId)
+                ->inRandomOrder()
+                ->value('video_id');
+
+            if ($randomVideoId) {
+                $recommended = $this->getCollaborativeRecommendations($randomVideoId, 10);
+
+                if ($recommended->count() < 10) {
+                    $remaining = 10 - $recommended->count();
+                    $alreadyFetchedIds = $recommended->pluck('id')->push($randomVideoId)->toArray();
+
+                    $contentBased = Video::where('category', Video::find($randomVideoId)->category)
+                        ->whereNotIn('id', $alreadyFetchedIds)
+                        ->where('status', Video::STATUS_READY)
+                        ->inRandomOrder()
+                        ->take($remaining)
+                        ->get();
+
+                    $recommended = $recommended->merge($contentBased);
+                }
+            } else {
+                $recommended = Video::where('status', Video::STATUS_READY)
+                    ->inRandomOrder()
+                    ->take(10)
+                    ->get();
+            }
+        }
+
+        return response()->json([
+            'featured' => $featured,
+            'trending' => $trending,
+            'popular' => $popular,
+            'newReleases' => $newReleases,
+            'action' => $action,
+            'continueWatching' => $continueWatching,
+            'recommended' => $recommended,
+        ]);
+    }
 
 }

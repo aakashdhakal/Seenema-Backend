@@ -3,12 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Auth\Notifications\ResetPassword;
+
 
 
 
@@ -75,5 +77,29 @@ class User extends Authenticatable implements MustVerifyEmail
     public function receivesBroadcastNotificationsOn(): string
     {
         return 'user.' . $this->id;
+    }
+
+    public function sendPasswordResetNotification($token)
+    {
+        $resetUrl = env("FRONTEND_URL") .
+            '/reset-password?token=' . $token . '&email=' . urlencode($this->email);
+
+        $this->notify(new class ($token, $resetUrl) extends ResetPassword {
+            private $customUrl;
+            public function __construct($token, $customUrl)
+            {
+                parent::__construct($token);
+                $this->customUrl = $customUrl;
+            }
+            protected function resetUrl($notifiable)
+            {
+                return $this->customUrl;
+            }
+            protected function buildMailMessage($url)
+            {
+                return parent::buildMailMessage($url)
+                    ->greeting('Reset Your Password'); // Custom greeting
+            }
+        });
     }
 }
