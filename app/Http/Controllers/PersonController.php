@@ -43,9 +43,6 @@ class PersonController extends Controller
         return response()->json($person, 201);
     }
 
-    /**
-     * Attach one or more people to a video with their specific roles and credits.
-     */
     public function addPersonToVideo(Request $request)
     {
         // 1. Updated validation to include the 'role' and make 'credited_as' nullable.

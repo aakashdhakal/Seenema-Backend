@@ -90,7 +90,7 @@ class VideoController extends Controller
             'contentRating' => 'nullable|string',
             'visibility' => 'required|string',
             'language' => 'required|string',
-            'subtitle' => 'nullable|file|mimes:vtt|max:2048', // Assuming VTT format for subtitles
+            'subtitle' => 'nullable|file|mimes:vtt,txt,text|max:2048',
         ]);
 
         $appUrl = env('APP_URL');
