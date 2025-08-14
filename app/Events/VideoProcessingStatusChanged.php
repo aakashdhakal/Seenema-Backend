@@ -35,7 +35,10 @@ class VideoProcessingStatusChanged implements ShouldBroadcast
     {
         return [
             // Channel for the specific user who owns the video
-            new PrivateChannel('user.' . $this->video->user_id),
+            new PrivateChannel('admin.notifications'),
+
+            // new PrivateChannel('user.' . $this->video->user_id),
+
         ];
     }
 

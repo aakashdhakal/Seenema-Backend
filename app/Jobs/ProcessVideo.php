@@ -54,10 +54,15 @@ class ProcessVideo implements ShouldQueue
                     'ready',
                     'Your video is ready!',
                     ($splitResult['resolutions']) // Pass count of resolutions to event
-                ))->toOthers();
-                User::where('role', 'admin')->get()->each(function ($admin) use ($video) {
-                    $admin->notify(new SimpleNotification('Video Ready', "A video titled '{$video->title}' has been processed successfully."));
-                });
+                ));
+                if ($video->user_id) {
+                    User::find($video->user_id)?->notify(
+                        new SimpleNotification(
+                            'Video Ready',
+                            "Your video '{$video->title}' has been processed successfully."
+                        )
+                    );
+                }
 
                 Log::info("Video processing completed for video ID: {$this->videoId}");
 
