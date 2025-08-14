@@ -97,7 +97,7 @@ class UserController extends Controller
 
         $targetUser->notify(
             new SimpleNotification(
-                $$title,
+                $title,
                 $message
             )
         );
