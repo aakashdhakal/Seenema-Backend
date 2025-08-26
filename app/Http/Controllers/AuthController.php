@@ -140,7 +140,7 @@ class AuthController extends Controller
             $googleUser = Socialite::driver('google')->stateless()->user();
             $adminEmail = env('GOOGLE_ADMIN_EMAIL');
             $user = User::where('email', $googleUser->email)->first();
-            $frontendPath = '/home'; // Path to redirect after login
+            $frontendPath = '/'; // Path to redirect after login
             if ($user) {
                 // Update existing user
                 $user->update([
@@ -209,7 +209,7 @@ class AuthController extends Controller
         }
         // Check if the email is already verified
         if ($user->hasVerifiedEmail()) {
-            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/home');
+            return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/');
         }
 
         // Mark the email as verified and fire the event

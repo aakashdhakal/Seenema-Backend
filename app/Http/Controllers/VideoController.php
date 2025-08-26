@@ -225,7 +225,6 @@ class VideoController extends Controller
             'resolutions' => $video->resolutions
         ]);
     }
-    // Content-based recommendation: finds videos from the same category as the given video
     public function getContentBasedRecommendations($videoId, $limit = 10)
     {
         $currentVideo = Video::findOrFail($videoId);
