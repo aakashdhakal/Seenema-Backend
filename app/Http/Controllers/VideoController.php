@@ -75,8 +75,6 @@ class VideoController extends Controller
         return floatval($duration);
     }
 
-
-
     // Function handle video upload
     public function createVideoEntry(Request $request)
     {
@@ -124,9 +122,6 @@ class VideoController extends Controller
         return response()->json(['video_id' => $video->id], 201);
     }
 
-    /**
-     * Step 2: Receive and assemble file chunks.
-     */
     public function uploadChunk(Request $request)
     {
         try {
@@ -227,29 +222,34 @@ class VideoController extends Controller
     }
     public function getContentBasedRecommendations($videoId, $limit = 10)
     {
-        $currentVideo = Video::findOrFail($videoId);
+        $currentVideo = Video::with(['tags', 'people'])->findOrFail($videoId);
         $alreadyFetchedIds = [$currentVideo->id];
-
-        $categoryVideos = Video::where('category', $currentVideo->category)
+        $tagIds = $currentVideo->tags->pluck('id')->toArray();
+        $personIds = $currentVideo->people->pluck('id')->toArray();
+        $category = $currentVideo->category;
+        $recommendations = Video::where('status', Video::STATUS_READY)
             ->whereNotIn('id', $alreadyFetchedIds)
-            ->where('status', Video::STATUS_READY)
+            ->where(function ($query) use ($category, $tagIds, $personIds) {
+                $query->where('category', $category)
+                    ->orWhereHas('tags', function ($q) use ($tagIds) {
+                        $q->whereIn('tags.id', $tagIds);
+                    })
+                    ->orWhereHas('people', function ($q) use ($personIds) {
+                        $q->whereIn('people.id', $personIds);
+                    });
+            })
             ->inRandomOrder()
             ->take($limit)
             ->get();
-
-        return $categoryVideos;
+        return $recommendations;
     }
 
     // Collaborative recommendation: finds videos watched by users who watched a given video
     public function getCollaborativeRecommendations($videoId, $limit = 10)
     {
         $currentVideo = Video::findOrFail($videoId);
-
-        // Find users who watched the current video
         $usersWhoWatchedThis = WatchHistory::where('video_id', $currentVideo->id)
             ->pluck('user_id');
-
-        // Find other videos those users have watched
         $coWatchedVideoIds = WatchHistory::whereIn('user_id', $usersWhoWatchedThis)
             ->where('video_id', '!=', $currentVideo->id)
             ->pluck('video_id')
@@ -265,8 +265,6 @@ class VideoController extends Controller
 
         return $recommendations;
     }
-
-    // Main recommendation endpoint: uses a random video from user's watch history
     public function getRecommendations()
     {
         $userId = Auth::id();
@@ -292,19 +290,22 @@ class VideoController extends Controller
         // If not enough, fill with content-based
         if ($recommendations->count() < $limit) {
             $remainingLimit = $limit - $recommendations->count();
-            $alreadyFetchedIds = $recommendations->pluck('id')->push($randomVideoId)->toArray();
 
-            $contentBased = Video::where('category', Video::find($randomVideoId)->category)
-                ->whereNotIn('id', $alreadyFetchedIds)
-                ->where('status', Video::STATUS_READY)
-                ->inRandomOrder()
-                ->take($remainingLimit)
-                ->get();
+            // Exclude already fetched + the current video
+            $alreadyFetchedIds = $recommendations->pluck('id')
+                ->push($randomVideoId)
+                ->toArray();
+
+            // Use the content-based recommender, but filter out already chosen videos
+            $contentBased = $this->getContentBasedRecommendations($randomVideoId, $remainingLimit)
+                ->whereNotIn('id', $alreadyFetchedIds);
 
             $recommendations = $recommendations->merge($contentBased);
         }
+
         return response()->json($recommendations);
     }
+
 
     public function getAllVideos()
     {

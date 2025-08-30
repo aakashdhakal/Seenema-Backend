@@ -18,7 +18,6 @@ class Video extends Model
         'backdrop_path',
         'duration',
         'user_id',
-        'rating',
         'status',
         'content_rating',
         'language',

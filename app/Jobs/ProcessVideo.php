@@ -191,14 +191,12 @@ class ProcessVideo implements ShouldQueue
                     $videoFilters .= ",format=yuv420p";
                 }
 
-                // Choose appropriate x264 profile and settings
                 $x264Profile = $is10Bit ? "high" : "main";
 
-                // Build the FFmpeg command with proper 10-bit handling
                 $ffmpegCommand = "$ffmpegPath -y -i \"$videoPath\" "
                     . "-vf \"$videoFilters\" "
                     . "-c:v libx264 -preset slow -profile:v $x264Profile "
-                    . "-pix_fmt yuv420p "  // Force 8-bit output
+                    . "-pix_fmt yuv420p "
                     . "-g 48 -keyint_min 48 "
                     . "-b:v {$profile['bitrate']} "
                     . "-maxrate " . (intval($profile['bitrate']) * 1.5) . ($profile['bitrate'][strlen($profile['bitrate']) - 1] === 'k' ? 'k' : '') . " "
@@ -212,13 +210,6 @@ class ProcessVideo implements ShouldQueue
                     . "-start_number 0 "
                     . "-hls_list_size 0 "
                     . "-f hls \"$profileDir/$playlistName\"";
-
-                Log::info("Processing profile: {$profile['label']}", [
-                    'command' => $ffmpegCommand,
-                    'profile' => $x264Profile,
-                    'is_10bit' => $is10Bit
-                ]);
-
                 $process = Process::timeout(14400)->run($ffmpegCommand);
 
                 if ($process->successful()) {

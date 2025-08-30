@@ -17,28 +17,18 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-
-    //login function
     public function login(Request $request)
     {
-        // Validate incoming request
         $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        // Check if credentials are correct
         if (!auth()->attempt($request->only('email', 'password'))) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
-
-        // If authentication passed
         $user = auth()->user();
-
-        // Create a token for the user
         $token = $user->createToken('auth_token')->plainTextToken;
-
-        // Return token + user info
         return response()->json([
             'message' => 'Login successful',
             'access_token' => $token,
@@ -50,38 +40,29 @@ class AuthController extends Controller
     //register function
     public function register(Request $request)
     {
-        // Validate the request data
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Make profile picture optional
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
-
-        // Create a new user
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'user', // Default role
+            'role' => 'user', 
         ]);
-
-        // Handle profile picture upload if it exists
         if ($request->hasFile('profile_picture')) {
             $path = $request->file('profile_picture')->storeAs('images/', 'public');
             $user->profile_picture = $path;
             $user->save();
         }
-
         $user->sendEmailVerificationNotification();
         Auth::login($user, remember: true);
-
         $user->notify(new SimpleNotification(
             'Welcome to Seenema',
             'Experience the world of cinema with us! Enjoy your journey through movies'
         ));
-
-        // Return success response
         return response()->json(['message' => 'User registered successfully'], 201);
     }
 
@@ -89,19 +70,11 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-        // Revoke the token that was used to authenticate the request
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        // Return success response
         return response()->json(['message' => 'Logged out successfully'], 200);
     }
 
-    //refresh function
-    public function refresh(Request $request)
-    {
-
-    }
 
     public function getAuthenticatedUser(Request $request)
     {
@@ -200,7 +173,7 @@ class AuthController extends Controller
             return redirect(env('FRONTEND_URL', 'http://localhost:3000') . '/login?error=' . urlencode($e->getMessage()));
         }
     }
-    public function verifyEmail(Request $request, $id, $hash)
+    public function verifyEmail($id, $hash)
     {
         $user = User::find($id);
         // Check if user exists and the hash is correct
