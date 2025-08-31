@@ -16,7 +16,7 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 //test email templete
 Route::get('/test-email', function () {
     return view('vendor.notifications.email', [
-        'greeting' => 'Welcome to StreamFlow!',
+        'greeting' => 'Welcome to Seenema!',
         'level' => 'success', // or 'error'
         'introLines' => [
             'Thank you for joining our streaming platform.',

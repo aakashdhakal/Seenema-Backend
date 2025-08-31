@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\SimpleNotification;
 use App\Models\Genre;
 use App\Models\Tag;
+use Carbon\Carbon;
 
 
 class VideoController extends Controller
@@ -735,6 +736,220 @@ class VideoController extends Controller
             'continueWatching' => $continueWatching,
             'recommended' => $recommended,
         ]);
+    }
+    public function getDashboardData()
+    {
+        try {
+            $data = [
+                'overview' => $this->getOverviewStats(),
+                'userGrowth' => $this->getUserGrowthData(),
+                'videoStats' => $this->getVideoStatsData(),
+                'genreDistribution' => $this->getGenreDistribution(),
+                'watchTimeAnalytics' => $this->getWatchTimeAnalytics(),
+                'recentActivity' => $this->getRecentActivity(),
+                'topVideos' => $this->getTopVideos(),
+                'systemHealth' => $this->getSystemHealth(),
+            ];
+            return response()->json($data);
+        } catch (\Exception $e) {
+            return response()->json(['error' => "Failed to fetch dashboard data $e"], 500);
+        }
+    }
+
+    private function getOverviewStats()
+    {
+        $currentMonth = Carbon::now();
+        $lastMonth = Carbon::now()->subMonth();
+
+        $totalUsers = User::count();
+        $totalVideos = Video::count();
+        $readyVideos = Video::where('status', 'ready')->count();
+        $processingVideos = Video::where('status', 'processing')->count();
+
+        $totalWatchTime = WatchHistory::sum('watched_duration');
+        $avgWatchTime = $totalUsers > 0 ? $totalWatchTime / $totalUsers : 0;
+
+        $activeToday = User::whereDate('updated_at', Carbon::today())->count();
+
+        $usersThisMonth = User::whereMonth('created_at', $currentMonth->month)
+            ->whereYear('created_at', $currentMonth->year)->count();
+        $usersLastMonth = User::whereMonth('created_at', $lastMonth->month)
+            ->whereYear('created_at', $lastMonth->year)->count();
+
+        $userGrowth = $usersLastMonth > 0 ? (($usersThisMonth - $usersLastMonth) / $usersLastMonth) * 100 : 0;
+
+        return [
+            'totalUsers' => $totalUsers,
+            'totalVideos' => $totalVideos,
+            'readyVideos' => $readyVideos,
+            'processingVideos' => $processingVideos,
+            'totalWatchTime' => $totalWatchTime,
+            'avgWatchTime' => $avgWatchTime,
+            'activeToday' => $activeToday,
+            'userGrowth' => round($userGrowth, 1),
+        ];
+    }
+
+    private function getUserGrowthData()
+    {
+        $data = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $users = User::whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)->count();
+            $data[] = ['month' => $date->format('M Y'), 'users' => $users];
+        }
+        return $data;
+    }
+
+    private function getVideoStatsData()
+    {
+        $data = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $uploads = Video::whereYear('created_at', $date->year)
+                ->whereMonth('created_at', $date->month)->count();
+            $data[] = ['month' => $date->format('M Y'), 'uploads' => $uploads];
+        }
+        return $data;
+    }
+
+    private function getGenreDistribution()
+    {
+        // Assumes Genre model: public function videos(){ return $this->belongsToMany(Video::class); }
+        $colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1', '#d084d0'];
+
+        return Genre::withCount('videos')
+            ->orderByDesc('videos_count')
+            ->take(6)
+            ->get()
+            ->map(function ($g, $i) use ($colors) {
+                return [
+                    'name' => $g->name,
+                    'count' => $g->videos_count,
+                    'color' => $colors[$i % count($colors)],
+                ];
+            })->toArray();
+    }
+
+    private function getTopVideos()
+    {
+        // Top watched videos in the last 30 days based on WatchHistory
+        $since = Carbon::now()->subDays(30);
+
+        $stats = WatchHistory::selectRaw('video_id,
+                COUNT(*) AS views,
+                SUM(watched_duration) AS total_watch_seconds,
+                MAX(updated_at) AS last_watched_at')
+            ->where('updated_at', '>=', $since)
+            ->groupBy('video_id')
+            ->orderByDesc('views')
+            ->limit(10)
+            ->get();
+
+        if ($stats->isEmpty()) {
+            return [];
+        }
+
+        $videos = Video::whereIn('id', $stats->pluck('video_id'))
+            ->where('status', Video::STATUS_READY)
+            ->get()
+            ->keyBy('id');
+
+        return $stats->map(function ($row) use ($videos) {
+            $video = $videos->get($row->video_id);
+            if (!$video) {
+                return null;
+            }
+            $views = (int) $row->views;
+            $totalSeconds = (int) $row->total_watch_seconds;
+            return [
+                'id' => $video->id,
+                'title' => $video->title,
+                'thumbnail' => $video->thumbnail_path,
+                'views' => $views,
+                'totalWatchHours' => round($totalSeconds / 3600, 2),
+                'avgWatchSeconds' => $views > 0 ? round($totalSeconds / $views, 1) : 0,
+                'lastWatched' => Carbon::parse($row->last_watched_at)->toDateTimeString(),
+            ];
+        })->filter()->values()->toArray();
+    }
+
+    private function getWatchTimeAnalytics()
+    {
+        $days = 6;
+        $start = Carbon::now()->subDays($days)->startOfDay();
+
+        $raw = WatchHistory::selectRaw('DATE(updated_at) as d, SUM(watched_duration) as wt')
+            ->where('updated_at', '>=', $start)
+            ->groupBy('d')
+            ->orderBy('d')
+            ->pluck('wt', 'd');
+
+        $out = [];
+        for ($i = $days; $i >= 0; $i--) {
+            $day = Carbon::now()->subDays($i)->toDateString();
+            $seconds = (int) ($raw[$day] ?? 0);
+            $out[] = [
+                'date' => Carbon::parse($day)->format('M d'),
+                'hours' => round($seconds / 3600, 1),
+            ];
+        }
+        return $out;
+    }
+
+
+
+    private function getRecentActivity()
+    {
+        $activities = collect();
+
+        $recentUsers = User::latest()->limit(3)->get();
+        foreach ($recentUsers as $user) {
+            $activities->push([
+                'type' => 'user_registered',
+                'description' => "New user {$user->name} registered",
+                'timestamp' => $user->created_at
+            ]);
+        }
+
+        $recentVideos = Video::latest()->limit(3)->get();
+        foreach ($recentVideos as $video) {
+            $activities->push([
+                'type' => 'video_uploaded',
+                'description' => "Video '{$video->title}' was uploaded",
+                'timestamp' => $video->created_at
+            ]);
+        }
+
+        $processedVideos = Video::where('status', 'ready')->latest('updated_at')->limit(2)->get();
+        foreach ($processedVideos as $video) {
+            $activities->push([
+                'type' => 'video_processed',
+                'description' => "Video '{$video->title}' processing completed",
+                'timestamp' => $video->updated_at
+            ]);
+        }
+
+        return $activities->sortByDesc('timestamp')->take(10)->values()->toArray();
+    }
+
+
+
+    private function getSystemHealth()
+    {
+        $storageUsed = round(disk_free_space(storage_path()) / (1024 * 1024 * 1024), 2);
+        $storageTotal = 100;
+        $queueJobs = \DB::table('jobs')->count();
+        $failedJobs = \DB::table('failed_jobs')->count();
+
+        return [
+            'storageUsed' => $storageUsed,
+            'storageTotal' => $storageTotal,
+            'queueJobs' => $queueJobs,
+            'failedJobs' => $failedJobs,
+            'serverStatus' => 'healthy',
+        ];
     }
 
 }

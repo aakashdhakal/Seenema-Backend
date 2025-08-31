@@ -50,13 +50,7 @@ Route::prefix('video')->group(function () {
     Route::post('/chunk/upload', [VideoController::class, 'uploadChunk']);
     Route::get('/status/{videoId}', [VideoController::class, 'getVideoStatus']);
     Route::delete('/{videoId}', [VideoController::class, 'deleteVideo']);
-    // Route::get('/featured', [VideoController::class, 'getFeaturedVideo']);
-    // Route::get('/trending', [VideoController::class, 'getTrendingVideos']);
-    // Route::get('/popular', [VideoController::class, 'getPopularVideos']);
-    // Route::get('/new-release', [VideoController::class, 'getNewReleases']);
-    // Route::get('/category/{category}', [VideoController::class, 'getVideoByCategory']);
-    // Route::get('/continue-watching', [VideoController::class, 'getContinueWatching']);
-    // Route::get('/recommendations', [VideoController::class, 'getRecommendations']);
+    Route::get('/dashboard', [VideoController::class, 'getDashboardData']);
     Route::get('/home', [VideoController::class, 'getHomePageData']);
     Route::get('/all/paginate', [VideoController::class, 'getAllPaginatedVideos']);
     Route::get('/all', [VideoController::class, 'getAllVideos']);
@@ -126,13 +120,7 @@ Route::prefix('watchlist')->group(function () {
     Route::get('/check/{id}', [WatchListController::class, 'checkIfVideoInWatchList']);
 });
 
-Route::prefix('favourites')->group(
-    function () {
-        Route::post('/add', [FavouritesController::class, 'addToFavourites']);
-        Route::delete('/{id}', [FavouritesController::class, 'removeFromFavourites']);
-        Route::get('/', [FavouritesController::class, 'getFavourites']);
-    }
-);
+
 //Search Route
 Route::get('/search', [VideoController::class, 'getSearchResults']);
 
