@@ -36,8 +36,6 @@ class AuthController extends Controller
             'user' => $user,
         ]);
     }
-
-    //register function
     public function register(Request $request)
     {
         $request->validate([
@@ -65,8 +63,6 @@ class AuthController extends Controller
         ));
         return response()->json(['message' => 'User registered successfully'], 201);
     }
-
-    //logout function
     public function logout(Request $request)
     {
         Auth::logout();

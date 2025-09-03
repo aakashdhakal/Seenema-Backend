@@ -3,18 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\Video;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Jobs\ProcessVideo;
-use App\Models\WatchHistory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Models\User;
 use App\Notifications\SimpleNotification;
+use Carbon\Carbon;
+use App\Models\Video;
+use App\Models\WatchHistory;
+use App\Models\User;
 use App\Models\Genre;
 use App\Models\Tag;
-use Carbon\Carbon;
 
 
 class VideoController extends Controller

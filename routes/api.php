@@ -110,6 +110,7 @@ Route::prefix('user')->group(function () {
 });
 
 Route::prefix('users')->group(function () {
+    Route::delete('/{id}', [UserController::class, 'deleteUser']);
     Route::get('/', [UserController::class, 'getAllUsers']);
 });
 

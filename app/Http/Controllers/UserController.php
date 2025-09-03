@@ -153,4 +153,35 @@ class UserController extends Controller
             'user' => $targetUser
         ]);
     }
+
+    //delete user account
+    public function deleteUser($id)
+    {
+        $user = auth()->user();
+
+        if ($user->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $targetUser = User::find($id);
+
+        if (!$targetUser) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Delete profile picture if exists
+        if ($targetUser->profile_picture) {
+            $oldPath = str_replace('/storage/', '', parse_url($targetUser->profile_picture, PHP_URL_PATH));
+            if (Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->delete($oldPath);
+            }
+        }
+
+        $targetUser->delete();
+
+        return response()->json([
+            'message' => 'User deleted successfully',
+            'user' => $targetUser
+        ]);
+    }
 }
