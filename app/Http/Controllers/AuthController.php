@@ -48,7 +48,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'user', 
+            'role' => 'user',
         ]);
         if ($request->hasFile('profile_picture')) {
             $path = $request->file('profile_picture')->storeAs('images/', 'public');
